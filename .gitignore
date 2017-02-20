@@ -7,6 +7,9 @@ xcode
 /build
 /cmake_build
 .cache
+/build_*
+/temp
+/.idea
 
 # Ignore the data folder, but not the berlin example.
 data/*

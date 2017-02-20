@@ -243,10 +243,15 @@ def extract_features(color_image, config, mask=None):
     else:
         raise ValueError('Unknown feature type (must be SURF, SIFT, AKAZE or HAHOG)')
 
+    # all descriptors return the following four fields
+    # x, y, diameter, angle
+    # the hahog feature return two more fields: a21, a22, which I don't know what it is.
     xs = points[:,0].round().astype(int)
     ys = points[:,1].round().astype(int)
     colors = color_image[ys, xs]
 
+    # remove the key points that is not in the mask, and
+    # transform coordinate such that x' = (x-width/2) / max(width, height), i.e. centering
     return mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask)
 
 

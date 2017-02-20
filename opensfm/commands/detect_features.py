@@ -44,7 +44,10 @@ def detect(args):
     if not data.feature_index_exists(image):
         mask = data.mask_as_array(image)
         if mask is not None:
+            print("found mask for image:%s" % image)
             logger.info('Found mask to apply for image {}'.format(image))
+        else:
+            print("Not found mask for the image")
         preemptive_max = data.config.get('preemptive_max', 200)
         p_unsorted, f_unsorted, c_unsorted = features.extract_features(
             data.image_as_array(image), data.config, mask)

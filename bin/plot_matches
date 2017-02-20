@@ -12,7 +12,7 @@ from opensfm import features
 from opensfm import io
 
 
-def plot_matches(im1, im2, p1, p2):
+def plot_matches(im1, im2, p1, p2, show_correspondence):
     h1, w1, c = im1.shape
     h2, w2, c = im2.shape
     image = np.zeros((max(h1, h2), w1 + w2, 3), dtype=im1.dtype)
@@ -22,8 +22,9 @@ def plot_matches(im1, im2, p1, p2):
     p1 = features.denormalized_image_coordinates(p1, w1, h1)
     p2 = features.denormalized_image_coordinates(p2, w2, h2)
     pl.imshow(image)
-    for a, b in zip(p1, p2):
-        pl.plot([a[0], b[0] + w1], [a[1], b[1]], 'c')
+    if show_correspondence:
+        for a, b in zip(p1, p2):
+            pl.plot([a[0], b[0] + w1], [a[1], b[1]], 'c')
 
     pl.plot(p1[:, 0], p1[:, 1], 'ob')
     pl.plot(p2[:, 0] + w1, p2[:, 1], 'ob')
@@ -43,6 +44,14 @@ if __name__ == "__main__":
     parser.add_argument('--save_figs',
                         help='save figures istead of showing them',
                         action='store_true')
+    parser.add_argument('--random_downsample_keep',
+                    help='random downsample the lines to see better',
+                    default=-1.0)
+    parser.add_argument('--no_correspondence', dest = "show_correspondence",
+                    help='random downsample the lines to see better',
+                    action='store_false')
+    parser.set_defaults(show_correspondence=True)
+
     args = parser.parse_args()
 
     data = dataset.DataSet(args.dataset)
@@ -81,6 +90,11 @@ if __name__ == "__main__":
             if len(matches) == 0:
                 continue
             print 'plotting matches between', im1, im2
+            random_downsample_keep = float(args.random_downsample_keep)
+            if random_downsample_keep > 0:
+                print("random downsample keep %f" % random_downsample_keep)
+                indi = np.random.random_sample(size=(len(matches))) < random_downsample_keep
+                matches = matches[indi, :]
 
             p1, f1, c1 = data.load_features(im1)
             p2, f2, c2 = data.load_features(im2)
@@ -91,7 +105,7 @@ if __name__ == "__main__":
             pl.title('Images: ' + im1 + ' - ' + im2 + ', matches: ' +
                      str(matches.shape[0]))
             plot_matches(data.image_as_array(im1),
-                         data.image_as_array(im2), p1, p2)
+                         data.image_as_array(im2), p1, p2, bool(args.show_correspondence))
             i += 1
             if args.save_figs:
                 p = args.dataset + '/plot_tracks'

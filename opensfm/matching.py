@@ -138,8 +138,10 @@ def good_track(track, min_length):
     if len(track) < min_length:
         return False
     images = [f[0] for f in track]
+    # TODO smarter method to filter out inconsistent ways
     if len(images) != len(set(images)):
         return False
+    # TODO: add the start end distance constraint
     return True
 
 
@@ -158,6 +160,7 @@ def create_tracks_graph(features, colors, matches, config):
         else:
             sets[p] = [i]
 
+    # one track is a sequence of image 2D keypoints
     tracks = [t for t in sets.values() if good_track(t, config.get('min_track_length', 2))]
     logger.debug('Good tracks: {}'.format(len(tracks)))
 

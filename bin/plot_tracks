@@ -94,7 +94,7 @@ if __name__ == "__main__":
                 random_downsample_keep = float(args.random_downsample_keep)
                 if random_downsample_keep > 0:
                     print("random downsample keep %f" % random_downsample_keep)
-                    indi = np.random.random_sample(size=(len(matches))) < random_downsample_keep
+                    indi = np.random.random_sample(size=len(p1)) < random_downsample_keep
                     p1=p1[indi]
                     p2=p2[indi]
 

@@ -168,7 +168,8 @@ def pairwise_reconstructability(common_tracks, homography_inliers):
     """Likeliness of an image pair giving a good initial reconstruction."""
     outliers = common_tracks - homography_inliers
     outlier_ratio = float(outliers) / common_tracks
-    if outlier_ratio > 0.3:
+    # Yang: I think this less comparison is correct, original seems revert
+    if outlier_ratio < 0.3:
         return common_tracks
     else:
         return 0
@@ -278,6 +279,7 @@ def two_view_reconstruction(p1, p2, camera1, camera2, threshold):
     b1 = camera1.pixel_bearings(p1)
     b2 = camera2.pixel_bearings(p2)
 
+    # TODO: read opengv docs later
     # Note on threshold:
     # See opengv doc on thresholds here:
     #   http://laurentkneip.github.io/opengv/page_how_to_use.html
@@ -748,6 +750,7 @@ def incremental_reconstruction(data):
     for im1, im2 in pairs:
         if im1 in remaining_images and im2 in remaining_images:
             tracks, p1, p2 = common_tracks[im1, im2]
+            # TODO: we have to carefully select which image pairs to use
             reconstruction = bootstrap_reconstruction(data, graph, im1, im2, p1, p2)
             if reconstruction:
                 remaining_images.remove(im1)

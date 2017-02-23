@@ -229,9 +229,12 @@ def all_common_tracks(graph, tracks, include_features=True, min_common=50):
             track_dict[pair].append(tr)
     common_tracks = {}
     for k, v in track_dict.iteritems():
+        # k = (image1, image2)
+        # v = list of tracks, tracks is kind of obsecure object here.
         if len(v) < min_common:
             continue
         if include_features:
+            # graph[image] get the node of that image, and graph[image][track] get the corresponding track
             t1, t2 = graph[k[0]], graph[k[1]]
             p1 = np.array([t1[tr]['feature'] for tr in v])
             p2 = np.array([t2[tr]['feature'] for tr in v])

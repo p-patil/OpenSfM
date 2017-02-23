@@ -240,10 +240,13 @@ def triangulate_tracks(tracks, reconstruction, graph, min_ray_angle):
     :return: An array of booleans determining if each track was successfully triangulated or not.
     """
     succeeded = []
+    # Yang: update to use the new triangulator interface
+    triangulator = reconstruct.TrackTriangulator(graph, reconstruction)
 
     for track in tracks:
         # Triangulate with 1 as reprojection threshold to avoid excluding tracks because of error.
-        reconstruct.triangulate_track(str(track), graph, reconstruction, {}, 1, min_ray_angle)
+        #reconstruct.triangulate_track(str(track), graph, reconstruction, {}, 1, min_ray_angle)
+        triangulator.triangulate(str(track), 1, min_ray_angle)
         succeeded.append(True) if str(track) in reconstruction.points else succeeded.append(False)
 
     return np.array(succeeded) if len(succeeded) else np.empty((0,), bool)
@@ -323,7 +326,7 @@ def load_common_tracks(im1, im2, graph):
     for t in tc:
         common_tracks.append(np.array([int(t), t1[t]['feature_id'], t2[t]['feature_id']]))
 
-    return np.array(common_tracks) if len(common_tracks) else np.empty((0, 3), int)
+    return np.array(common_tracks) if len(common_tracks) else np.empty((0, 3), int), p1, p2
 
 
 def load_tracks(im, graph):
@@ -568,7 +571,7 @@ def plot_two_view_reconstruction(fw, ip, index, track_points1, track_points2, da
     plot_matches(subplot, ip.im1_array, ip.im2_array, outliers1, outliers2, 'r', 'om')
 
 
-def plot_bootstrapped_reconstruction(fw, ip, index, p1, p2, robust_tracks, linked_tracks, graph, data):
+def plot_bootstrapped_reconstruction(fw, ip, index, p1, p2, robust_tracks, linked_tracks, graph, data, p1common, p2common):
     """ Plot successfully reconstructed and failed 3D points by bootstrapping a reconstruction.
 
     :param fw: Figure wrapper.
@@ -583,7 +586,7 @@ def plot_bootstrapped_reconstruction(fw, ip, index, p1, p2, robust_tracks, linke
     """
 
     print_reset = redirect_print()
-    reconstruction = reconstruct.bootstrap_reconstruction(data, graph, ip.im1, ip.im2)
+    reconstruction = reconstruct.bootstrap_reconstruction(data, graph, ip.im1, ip.im2, p1common, p2common)
     reset_print(print_reset)
 
     threshold, pixels1, pixels2 = thresholds(ip.im1_array, ip.im2_array, 'triangulation_threshold', 0.004, data)
@@ -648,7 +651,7 @@ def create_tracks_figure(im1, im2, data, save_figs=False, single_column=False):
     robust_matches = np.array(robust_matches) if len(robust_matches) else np.empty((0, 2), int)
 
     graph = data.load_tracks_graph()
-    tracks = load_common_tracks(im1, im2, graph)
+    tracks, p1common, p2common = load_common_tracks(im1, im2, graph)
     track_points1 = p1[tracks[:, 1]]
     track_points2 = p2[tracks[:, 2]]
 
@@ -656,12 +659,14 @@ def create_tracks_figure(im1, im2, data, save_figs=False, single_column=False):
         print 'Not enough tracks for five point algorithm: ' + str(tracks.shape[0])
         return
 
+    # robust tracks are the tracks that are matches
+    # linked tracks are the tracks that are not directly matched but linked
     robust_tracks, linked_tracks = matches(tracks, robust_matches, lambda a: a[1:])
 
     plot_common_tracks(fw, ip, 1, p1, p2, tracks, robust_tracks, linked_tracks, robust_matches)
     plot_opencv_find_homography(fw, ip, 2, tracks, track_points1, track_points2, data)
     plot_two_view_reconstruction(fw, ip, 3, track_points1, track_points2, data)
-    plot_bootstrapped_reconstruction(fw, ip, 4, p1, p2, robust_tracks, linked_tracks, graph, data)
+    plot_bootstrapped_reconstruction(fw, ip, 4, p1, p2, robust_tracks, linked_tracks, graph, data, p1common, p2common)
 
     display_figure(fig, save_figs, data, '{0}_{1}_{2}_tracks.jpg'.format(im1, im2, data.feature_type()))
 
@@ -768,7 +773,7 @@ def create_reconstruction_matches_figure(im1, im2, data, save_figs=False):
     p2 = load_points(im2, data)
 
     graph = data.load_tracks_graph()
-    tracks = load_common_tracks(im1, im2, graph)
+    tracks, p1common, p2common = load_common_tracks(im1, im2, graph)
     if tracks.shape[0] < 1:
         print 'No tracks to plot.'
         return

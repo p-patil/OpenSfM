@@ -4,6 +4,12 @@ set -e
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
+# rm_generated.sh
+
+# video_to_images.sh
+# blurry_detection.py
+# generate_mask.py & ?static_removal.py
+
 $DIR/opensfm extract_metadata $1
 $DIR/opensfm detect_features $1
 $DIR/opensfm match_features $1

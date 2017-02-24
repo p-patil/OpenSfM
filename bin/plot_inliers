@@ -246,6 +246,7 @@ def triangulate_tracks(tracks, reconstruction, graph, min_ray_angle):
     for track in tracks:
         # Triangulate with 1 as reprojection threshold to avoid excluding tracks because of error.
         #reconstruct.triangulate_track(str(track), graph, reconstruction, {}, 1, min_ray_angle)
+        # The triangulator will add the point to the reconstruction if succeeded
         triangulator.triangulate(str(track), 1, min_ray_angle)
         succeeded.append(True) if str(track) in reconstruction.points else succeeded.append(False)
 
@@ -531,6 +532,7 @@ def plot_opencv_find_homography(fw, ip, index, tracks, track_points1, track_poin
         .format(inliers.sum(), (~inliers).sum(), float((~inliers).sum()) / tracks.shape[0], threshold) + \
         '({0:.1f} - {1:.1f} pixels)'.format(pixels1, pixels2)
 
+    # again, m for outliers and blue for inliers
     subplot = plot_matches_sub(fw.figure, fw.rows, fw.cols, index, title, ip.im1_array, ip.im2_array,
                                outliers1, outliers2, 'r', 'om')
     plot_matches(subplot, ip.im1_array, ip.im2_array, inliers1, inliers2, 'c', 'ob')
@@ -614,9 +616,12 @@ def plot_bootstrapped_reconstruction(fw, ip, index, p1, p2, robust_tracks, linke
             'Triangulation threshold: {0:.2g} ({1:.1f} - {2:.1f} pixels). Min ray angle: {3}.'.format(
                 threshold, pixels1, pixels2, data.config.get('triangulation_min_ray_angle', 2.0))
 
+        # blue reconstruction means robust points
         rec_plot = plot_matches_sub(fw.figure, fw.rows, fw.cols, index, rec_title, ip.im1_array, ip.im2_array,
                                     robust_rec_points1, robust_rec_points2, 'c', 'ob')
+        # yellow means linked tracks
         plot_matches(rec_plot, ip.im1_array, ip.im2_array, non_robust_rec_points1, non_robust_rec_points2, 'g', 'oy')
+        # failed tracks, both in robust matchings and linked matchings
         plot_matches(rec_plot, ip.im1_array, ip.im2_array, failed_rec_points1, failed_rec_points2, 'r', 'om')
     else:
         failed_title = \
@@ -641,8 +646,10 @@ def create_tracks_figure(im1, im2, data, save_figs=False, single_column=False):
         create_four_figure('Tracks ({0}): {1} - {2}'.format(data.feature_type().upper(), im1, im2), single_column)
 
     fw = FigureWrapper(fig, rows, cols)
+    # ip.im1 ip.im2 ip.im1_array ip.im2_array
     ip = ImagePair(im1, im2, data.image_as_array(im1), data.image_as_array(im2))
 
+    # return the 2D locations
     p1 = load_points(im1, data)
     p2 = load_points(im2, data)
 
@@ -726,6 +733,12 @@ def plot_reprojected_tracks(fw, ip, index, p1, p2, tracks, rec_tracks, non_rec_t
     rp2 = reproject_tracks(ip.im2, rec_tracks[:, 0], reconstruction)
 
     min_ray_angle = data.config.get('triangulation_min_ray_angle', 2.0)
+    # The non-succeeded points are either:
+    # min_ray_angle not satisfied, for all pairs of keypoints in this track
+    # or reprojection error too large (in this case meaning fall out of image region, such as on the back of the image)
+    # In summary
+    # the m-color points are those with large reprojection errors
+    # the red-color points are those on the back of images, i.e. fall out of image region completely, Or min_ray angles
     succeeded = triangulate_tracks(non_rec_tracks[:, 0], reconstruction, graph, min_ray_angle)
     reprojected1 = reproject_tracks(ip.im1, non_rec_tracks[succeeded, 0], reconstruction)
     reprojected2 = reproject_tracks(ip.im2, non_rec_tracks[succeeded, 0], reconstruction)
@@ -778,6 +791,7 @@ def create_reconstruction_matches_figure(im1, im2, data, save_figs=False):
         print 'No tracks to plot.'
         return
 
+    # find a reconstruction that all images occur in it
     reconstruction = find_reconstruction([im1, im2], data)
     if reconstruction is None:
         print '{0} and {1} does not exist in a common reconstruction.'.format(im1, im2)

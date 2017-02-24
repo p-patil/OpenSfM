@@ -190,6 +190,7 @@ bp::object TriangulateBearingsMidpoint(const bp::list &os_list,
     }
   }
   if (!angle_ok) {
+    // for all pairs of points, if none of them has large enough angles, then return
     return TriangulateReturn(TRIANGULATION_SMALL_ANGLE, bp::object());
   }
 
@@ -203,11 +204,13 @@ bp::object TriangulateBearingsMidpoint(const bp::list &os_list,
 
     double error = AngleBetweenVectors(x_reproj, b);
     if (error > threshold) {
+     // if reprojection error too large
      return TriangulateReturn(TRIANGULATION_BAD_REPROJECTION, bp::object());
     }
   }
 
   npy_intp Xe_shape[1] = {3};
+  // good case
   return TriangulateReturn(TRIANGULATION_OK,
                            bpn_array_from_data(1, Xe_shape, X.data()));
 }

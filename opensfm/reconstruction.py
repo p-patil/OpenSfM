@@ -166,10 +166,11 @@ def bundle_single_view(graph, reconstruction, shot_id, config):
 
 def pairwise_reconstructability(common_tracks, homography_inliers):
     """Likeliness of an image pair giving a good initial reconstruction."""
+    # pairwise reconstructability probably has to care about the change of angles between the two images
     outliers = common_tracks - homography_inliers
     outlier_ratio = float(outliers) / common_tracks
     # Yang: I think this less comparison is correct, original seems revert
-    if outlier_ratio < 0.3:
+    if outlier_ratio > 0.3:
         return common_tracks
     else:
         return 0
@@ -197,6 +198,7 @@ def _pair_reconstructability_arguments(track_dict, config):
 
 
 def _compute_pair_reconstructability(args):
+    # TODO: why reconstructability is computed using findHomography?
     threshold, im1, im2, p1, p2 = args
     H, inliers = cv2.findHomography(p1, p2, cv2.RANSAC, threshold)
     r = pairwise_reconstructability(len(p1), inliers.sum())
@@ -276,6 +278,7 @@ def two_view_reconstruction(p1, p2, camera1, camera2, threshold):
     Returns:
         rotation, translation and inlier list
     """
+    # assume we know the camera models, convert the 2D coordinates to 3-dim homogeneous coordinates
     b1 = camera1.pixel_bearings(p1)
     b2 = camera2.pixel_bearings(p2)
 
@@ -340,6 +343,9 @@ def bootstrap_reconstruction(data, graph, im1, im2, p1, p2):
 
     thresh = data.config.get('five_point_algo_threshold', 0.006)
     min_inliers = data.config.get('five_point_algo_min_inliers', 50)
+    # TODO: why we are using five point methods? there is still possibility that
+    # TODO: input calibration from visualSFM
+    # the camera info is not complete, the estimated camera models are 0.0 default.
     R, t, inliers = two_view_reconstruction(p1, p2, camera1, camera2, thresh)
     if len(inliers) > 5:
         logger.info("Two-view reconstruction inliers {}".format(len(inliers)))
@@ -464,6 +470,7 @@ class TrackTriangulator:
         """Triangulate track and add point to reconstruction."""
         os, bs = [], []
         for shot_id in self.graph[track]:
+            # This will not add in new image, it will only triangulate the shots that are included
             if shot_id in self.reconstruction.shots:
                 shot = self.reconstruction.shots[shot_id]
                 os.append(self._shot_origin(shot))
@@ -473,6 +480,7 @@ class TrackTriangulator:
                 bs.append(r.dot(b))
 
         if len(os) >= 2:
+            # error and triangulated 3D point
             e, X = csfm.triangulate_bearings_midpoint(
                 os, bs, reproj_threshold, np.radians(min_ray_angle_degrees))
             if X is not None:
@@ -737,24 +745,42 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
 def incremental_reconstruction(data):
     """Run the entire incremental reconstruction pipeline."""
     logger.info("Starting incremental reconstruction")
+
+    # load the exif information from the images and convert to internal format
     data.invent_reference_lla()
+
+    # return an nx graph, with two kind of nodes, images, and tracks. features are keypoint locations
     graph = data.load_tracks_graph()
+
+    # all tracks and images stored in two lists
     tracks, images = matching.tracks_and_images(graph)
     remaining_images = set(images)
     gcp = None
+
+    # otherwise explictly written a ground control point, no such file exists.
     if data.ground_control_points_exist():
         gcp = data.load_ground_control_points()
+
+    # returns a [im1, im2] -> (tracks, im1_features, im2_features)
     common_tracks = matching.all_common_tracks(graph, tracks)
     reconstructions = []
+
+    # return a list of image pairs that sorted by decreasing favorability
     pairs = compute_image_pairs(common_tracks, data.config)
     for im1, im2 in pairs:
+        # each time choose two images that both are not in the collection
+        # after adding them into the reconstruction, removing them from the set
+        # if this if is entered multiple times, then it indicates that multiple
+        # reconstructions are found, which is not good.
         if im1 in remaining_images and im2 in remaining_images:
             tracks, p1, p2 = common_tracks[im1, im2]
             # TODO: we have to carefully select which image pairs to use
+            # This is only called once
             reconstruction = bootstrap_reconstruction(data, graph, im1, im2, p1, p2)
             if reconstruction:
                 remaining_images.remove(im1)
                 remaining_images.remove(im2)
+                # The main growing process, it doesn't only add in one image, it add in all.
                 reconstruction = grow_reconstruction(
                     data, graph, reconstruction, remaining_images, gcp)
                 reconstructions.append(reconstruction)

@@ -230,7 +230,7 @@ def reprojection_errors(reprojections, observations, scale):
     return errors, mean, std, min_norm, max_norm, corr
 
 
-def triangulate_tracks(tracks, reconstruction, graph, min_ray_angle):
+def triangulate_tracks(tracks, reconstruction, graph, min_ray_angle, output_detail_status=False):
     """ Triangulates a list of tracks.
 
     :param tracks: The array of tracks.
@@ -247,8 +247,12 @@ def triangulate_tracks(tracks, reconstruction, graph, min_ray_angle):
         # Triangulate with 1 as reprojection threshold to avoid excluding tracks because of error.
         #reconstruct.triangulate_track(str(track), graph, reconstruction, {}, 1, min_ray_angle)
         # The triangulator will add the point to the reconstruction if succeeded
-        triangulator.triangulate(str(track), 1, min_ray_angle)
-        succeeded.append(True) if str(track) in reconstruction.points else succeeded.append(False)
+        if output_detail_status:
+            e = triangulator.triangulate(str(track), 1, min_ray_angle, True)
+            succeeded.append(e)
+        else:
+            triangulator.triangulate(str(track), 1, min_ray_angle)
+            succeeded.append(True) if str(track) in reconstruction.points else succeeded.append(False)
 
     return np.array(succeeded) if len(succeeded) else np.empty((0,), bool)
 
@@ -738,20 +742,37 @@ def plot_reprojected_tracks(fw, ip, index, p1, p2, tracks, rec_tracks, non_rec_t
     # or reprojection error too large (in this case meaning fall out of image region, such as on the back of the image)
     # In summary
     # the m-color points are those with large reprojection errors
-    # the red-color points are those on the back of images, i.e. fall out of image region completely, Or min_ray angles
-    succeeded = triangulate_tracks(non_rec_tracks[:, 0], reconstruction, graph, min_ray_angle)
+    # the red-color points are those on the back of images, i.e. fall out of image region completely,
+    # Or min_ray angles (between bearing vectors, transformed in estimated world frame) not satisfy for all pairs of images in that track
+
+    # output detailed triangulate status, status code below
+    TRIANGULATION_OK = 0
+    TRIANGULATION_SMALL_ANGLE = 1
+    TRIANGULATION_BEHIND_CAMERA = 2 # this is never used
+    TRIANGULATION_BAD_REPROJECTION = 3
+    TRIANGULATION_POINTS_NOT_ENOUGH = 4 # should not be possible here, since we have all images now and min_track=2
+
+    status = triangulate_tracks(non_rec_tracks[:, 0], reconstruction, graph, min_ray_angle, True)
+    succeeded = (status == TRIANGULATION_OK)
     reprojected1 = reproject_tracks(ip.im1, non_rec_tracks[succeeded, 0], reconstruction)
     reprojected2 = reproject_tracks(ip.im2, non_rec_tracks[succeeded, 0], reconstruction)
 
-    triangulated_points1 = p1[non_rec_tracks[succeeded, 1]]
-    triangulated_points2 = p2[non_rec_tracks[succeeded, 2]]
-    excluded_points1 = p1[non_rec_tracks[~succeeded, 1]]
-    excluded_points2 = p2[non_rec_tracks[~succeeded, 2]]
+    get_points1=lambda set: p1[non_rec_tracks[set, 1]]
+    get_points2=lambda set: p2[non_rec_tracks[set, 2]]
+
+    triangulated_points1 = get_points1(succeeded)
+    triangulated_points2 = get_points2(succeeded)
+
+    small_angle = (status == TRIANGULATION_SMALL_ANGLE)
+    bad_project = (status == TRIANGULATION_BAD_REPROJECTION)
+    #excluded_points1 = p1[non_rec_tracks[~succeeded, 1]]
+    #excluded_points2 = p2[non_rec_tracks[~succeeded, 2]]
 
     title = 'Common tracks (loaded): {0}. Reprojected points (calculated): {1}.\n'\
         .format(tracks.shape[0], rec_tracks.shape[0]) + \
             'Rejected tracks: {0}. Re-triangulated: {1}. Failed: {2} (behind a camera or min ray angle: {3} deg).'\
-        .format(non_rec_tracks.shape[0], succeeded.sum(), (~succeeded).sum(), min_ray_angle)
+        .format(non_rec_tracks.shape[0], succeeded.sum(), (~succeeded).sum(), min_ray_angle) + \
+            'Red=small angle, Black=bad projection'
 
     subplot = create_subplot(fw.figure, fw.rows, fw.cols, index, title,
                              (0, ip.im1_array.shape[1] + ip.im2_array.shape[1]),
@@ -762,7 +783,9 @@ def plot_reprojected_tracks(fw, ip, index, p1, p2, tracks, rec_tracks, non_rec_t
     plot_points(subplot, ip.im1_array, rp1, '+w', ip.im2_array, rp2, '+w')
     plot_points(subplot, ip.im1_array, triangulated_points1, 'om', ip.im2_array, triangulated_points2, 'om')
     plot_points(subplot, ip.im1_array, reprojected1, '+w', ip.im2_array, reprojected2, '+w')
-    plot_points(subplot, ip.im1_array, excluded_points1, 'or', ip.im2_array, excluded_points2, 'or')
+    #plot_points(subplot, ip.im1_array, excluded_points1, 'or', ip.im2_array, excluded_points2, 'or')
+    plot_points(subplot, ip.im1_array, get_points1(small_angle), 'or', ip.im2_array, get_points2(small_angle), 'or')
+    plot_points(subplot, ip.im1_array, get_points1(bad_project), 'ok', ip.im2_array, get_points2(bad_project), 'ok')
 
 
 def create_reconstruction_matches_figure(im1, im2, data, save_figs=False):

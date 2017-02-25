@@ -298,6 +298,7 @@ def two_view_reconstruction(p1, p2, camera1, camera2, threshold):
     # threshold is small
 
     # 1. get relative pose using RANSAC
+    # TODO: TUNE THIS THRESHOLD
     T = run_relative_pose_ransac(
         b1, b2, "STEWENIUS", 1 - np.cos(threshold), 1000)
     R = T[:, :3]
@@ -777,6 +778,7 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
                     should_bundle.done(reconstruction)
 
                 # the default behavior is not retriangulate
+                # TODO: check whether this is needed
                 if should_retriangulate.should(reconstruction):
                     logger.info("Re-triangulating")
                     retriangulate(graph, reconstruction, data.config)

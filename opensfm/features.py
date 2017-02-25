@@ -90,8 +90,10 @@ def _in_mask(point, width, height, mask):
 
 
 def extract_features_sift(image, config):
+
     sift_edge_threshold = config.get('sift_edge_threshold', 10)
     sift_peak_threshold = float(config.get('sift_peak_threshold', 0.1))
+
     if context.OPENCV3:
         try:
             detector = cv2.xfeatures2d.SIFT_create(
@@ -106,6 +108,7 @@ def extract_features_sift(image, config):
         detector = cv2.FeatureDetector_create('SIFT')
         descriptor = cv2.DescriptorExtractor_create('SIFT')
         detector.setDouble('edgeThreshold', sift_edge_threshold)
+
     while True:
         logger.debug('Computing sift with threshold {0}'.format(sift_peak_threshold))
         t = time.time()
@@ -118,12 +121,38 @@ def extract_features_sift(image, config):
         points = detector.detect(image)
         logger.debug('Found {0} points in {1}s'.format( len(points), time.time()-t ))
         if len(points) < config.get('feature_min_frames', 0) and sift_peak_threshold > 0.0001:
-            sift_peak_threshold = (sift_peak_threshold * 2) / 3
+            sift_peak_threshold = sift_peak_threshold / 3
+            #sift_peak_threshold = (sift_peak_threshold * 2) / 3
             logger.debug('reducing threshold')
         else:
             logger.debug('done')
             break
     points, desc = descriptor.compute(image, points)
+
+
+    '''
+    # using nfeature directly instead of looping to find the right threshold
+    # TODO: polish the sift to accelerate
+    t = time.time()
+    feature_min_frames = config.get('feature_min_frames', 4000)
+
+    if context.OPENCV3:
+        detector = cv2.xfeatures2d.SIFT_create(nfeatures=feature_min_frames)
+        descriptor = detector
+        print("opencv3")
+    else:
+        detector = cv2.FeatureDetector_create('SIFT')
+        descriptor = cv2.DescriptorExtractor_create('SIFT')
+        detector.setInt('nfeatures', feature_min_frames)
+        print("opencv2")
+    print("feature_min_frames=%d" % feature_min_frames)
+    points = detector.detect(image)
+    points, desc = descriptor.compute(image, points)
+    logger.debug('Found {0} points in {1}s'.format(len(points), time.time() - t))
+
+    # original code below
+    '''
+
     if config.get('feature_root', False): desc = root_feature(desc)
     points = np.array([(i.pt[0], i.pt[1], i.size, i.angle) for i in points])
     return points, desc

@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     if not os.path.exists(path_seg):
         # segmentation not exist yet, call dilation
-        subprocess.call(["opensfm/car/generate_segmentation.sh", path_images, args.image_height])
+        subprocess.call(["opensfm/car/generate_segmentation.sh", path_images, str(args.image_height)])
 
     # convert segmentation into masks
     for root, dirs, files in os.walk(path_seg):

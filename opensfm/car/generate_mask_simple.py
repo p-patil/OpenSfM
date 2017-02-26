@@ -2,6 +2,8 @@ from PIL import Image
 import os
 import argparse
 import subprocess
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def convert_mask(value):
@@ -17,13 +19,12 @@ def convert_mask(value):
 
 def seg_to_mask(seg_path, mask_path):
     im = Image.open(seg_path)  # Can be many different formats.
-    pix = im.load()
-    width, height = im.size
-    for x in range(width):
-        for y in range(height):
-            pix[x, y] = convert_mask(pix[x, y])
+    pix = np.array(im)
+    pix = (pix<10)
+    pix = np.array(pix).astype(np.int32)*255
+    plt.imsave(mask_path,pix)
 
-    im.save(mask_path)  # Save the modified pixels as png
+    #im.save(mask_path)  # Save the modified pixels as png
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", help="dataset dir")
 args = parser.parse_args()
@@ -37,5 +38,6 @@ if __name__ == "__main__":
 	for root, dirs, files in os.walk(path_seg):
             for file in files:
                 if file.endswith("png"):
+                    print(os.path.join(path_seg, file))
                     seg_to_mask(os.path.join(path_seg, file),
                                 os.path.join(path_mask, file))

@@ -4,6 +4,7 @@ import argparse
 import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 
 
 def convert_mask(value):
@@ -22,7 +23,8 @@ def seg_to_mask(seg_path, mask_path):
     pix = np.array(im)
     pix = (pix<10)
     pix = np.array(pix).astype(np.int32)*255
-    plt.imsave(mask_path,pix)
+    cv2.imwrite(mask_path, pix)
+    #plt.imsave(mask_path,np.uint8(pix))
 
     #im.save(mask_path)  # Save the modified pixels as png
 parser = argparse.ArgumentParser()

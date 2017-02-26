@@ -1,16 +1,16 @@
 # Metadata
 use_exif_size: yes
-default_focal_prior: 0.85
+default_focal_prior: 0.85     # TODO: tune
 
 # Params for features
-feature_type: HAHOG           # Feature type (AKAZE, SURF, SIFT)
+feature_type: SIFT            # Yang: Feature type (AKAZE, SURF, SIFT)
 feature_root: 1               # If 1, apply square root mapping to features
 feature_min_frames: 4000      # If fewer frames are detected, sift_peak_threshold/surf_hessian_threshold is reduced.
 feature_process_size: 2048    # Resize the image if its size is larger than specified. Set to -1 for original size
 feature_use_adaptive_suppression: no
 
 # Params for SIFT
-sift_peak_threshold: 0.1     # Smaller value -> more features
+sift_peak_threshold: 0.01     # Yang: Smaller value -> more features
 sift_edge_threshold: 10       # See OpenCV doc
 
 # Params for SURF
@@ -42,35 +42,45 @@ flann_checks: 200             # Smaller -> Faster (but might lose good matches)
 # Params for preemtive matching
 matching_gps_distance: 150            # Maximum gps distance between two images for matching
 matching_gps_neighbors: 0             # Number of images to match selected by GPS distance. Set to 0 to use no limit
-matching_time_neighbors: 0            # Number of images to match selected by time taken. Set to 0 to use no limit
+matching_time_neighbors: 2            # Yang: Number of images to match selected by time taken. Set to 0 to use no limit
 preemptive_max: 200                   # Number of features to use for preemptive matching
 preemptive_threshold: 0               # If number of matches passes the threshold -> full feature matching
 
+# TODO
 # Params for geometric estimation
 robust_matching_threshold: 0.004      # Outlier threshold for fundamental matrix estimation as portion of image width
 robust_matching_min_match: 20         # Minimum number of matches to be considered as an edge in the match grph
+                                      # if the number of robust matches is less than this, then no matches between the
+                                      # two images
 five_point_algo_threshold: 0.004      # Outlier threshold (in pixels) for essential matrix estimation
+                                      # It's only for initial bootstraping process, for two view reconstruction, 5p method
 five_point_algo_min_inliers: 20       # Minimum number of inliers for considering a two view reconstruction valid.
+                                      # In the bootstrap process, if the reconstructed points is less than it, then fail
 triangulation_threshold: 0.006        # Outlier threshold (in pixels) for accepting a triangulated point.
-triangulation_min_ray_angle: 1.0
-resection_threshold: 0.004            # Outlier threshold (in pixels) for camera resection.
+triangulation_min_ray_angle: 0.1      # Yang: changed to a smaller value
+                                      # if no angles between the 2D observations within a single track has large enough
+                                      # angle, then discard this track
+resection_threshold: 0.004            # Outlier threshold (in reprojected pixels) for camera resection.
 resection_min_inliers: 10             # Minimum number of resection inliers to accept it.
-retriangulation: no
+retriangulation: no                   # TODO These two lines control shouldTriangulate
 retriangulation_ratio: 1.25
 
 # Params for track creation
-min_track_length: 2             # Minimum number of features/images per track
+min_track_length: 4             # Yang: Minimum number of features/images per track
 
 # Params for bundle adjustment
 loss_function: SoftLOneLoss     # Loss function for the ceres problem (see: http://ceres-solver.org/modeling.html#lossfunction)
 loss_function_threshold: 1      # Threshold on the squared residuals.  Usually cost is quadratic for smaller residuals and sub-quadratic above.
+# TODO confidence of the errors
 reprojection_error_sd: 0.004    # The startard deviation of the reprojection error
 exif_focal_sd: 0.01             # The standard deviation of the exif focal length in log-scale
 radial_distorsion_k1_sd: 0.01   # The standard deviation of the first radial distortion parameter (mean assumed to be 0)
 radial_distorsion_k2_sd: 0.01   # The standard deviation of the second radial distortion parameter (mean assumed to be 0)
-bundle_interval: 0              # bundle adjustment after adding 'bundle_interval' cameras
-bundle_new_points_ratio: 1.2    # bundle when (new points) / (bundled points) > bundle_outlier_threshold
-bundle_outlier_threshold: 0.006
+
+bundle_interval: 5              # Yang: bundle adjustment after adding 'bundle_interval' cameras
+bundle_new_points_ratio: 1.2    # bundle when (new points) / (bundled points) > bundle_new_points_ratio
+bundle_outlier_threshold: 0.006 # After bundling, if the returned reprojection error of a 3D point is too large, remove it
+# TODO done
 
 save_partial_reconstructions: no
 
@@ -92,4 +102,4 @@ nav_vertical_threshold: 20            # Maximum vertical angle difference in mot
 nav_rotation_threshold: 30            # Maximum general rotation in degrees between cameras for steps
 
 # Other params
-processes: 1                  # Number of threads to use
+processes: 8                  # Yang: Number of threads to use

@@ -46,6 +46,13 @@ matching_time_neighbors: 2            # Yang: Number of images to match selected
 preemptive_max: 200                   # Number of features to use for preemptive matching
 preemptive_threshold: 0               # If number of matches passes the threshold -> full feature matching
 
+# Yang: Params for homography
+# TODO: we haven't finished the homography road detection feature, the params here are not finalized
+homography_seg_relative_path: "output/results/frontend_vgg/"
+                                      # segmentation mask path in relative to the images path
+homography_lowes_ratio: 0.9           # a looser ratio test for the points on the ground
+homography_threshold: 0.002           # a stricter threshold for homography
+
 # TODO
 # Params for geometric estimation
 robust_matching_threshold: 0.004      # Outlier threshold for fundamental matrix estimation as portion of image width

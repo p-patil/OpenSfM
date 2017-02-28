@@ -7,6 +7,7 @@ import numpy as np
 from opensfm import dataset
 from opensfm import geo
 from opensfm import matching
+import opensfm.car.match_homography as homography
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +207,9 @@ def match(args):
         t_robust_matching = time.time()
         camera1 = ctx.cameras[ctx.exifs[im1]['camera']]
         camera2 = ctx.cameras[ctx.exifs[im2]['camera']]
+
+        # add extra matches on the road with homography method
+        # filter the candidate points by semantic segmentation
 
         rmatches = matching.robust_match(p1, p2, camera1, camera2, matches,
                                          config)

@@ -10,6 +10,8 @@ xcode
 /build_*
 /temp
 /.idea
+/bin/plot_matchesc
+/bin/plot_featuresc
 
 # Ignore the data folder, but not the berlin example.
 data/*

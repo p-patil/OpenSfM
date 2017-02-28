@@ -86,6 +86,7 @@ def align_reconstruction_naive_similarity(reconstruction, gcp):
 
 
 def align_reconstruction_orientation_prior_similarity(reconstruction, config):
+    # TODO: ground alignment has already been implemented
     """Align with GPS data assuming particular a camera orientation.
 
     In some cases, using 3D-3D matches directly fails to find proper

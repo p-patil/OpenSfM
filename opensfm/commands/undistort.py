@@ -57,7 +57,7 @@ class Command:
 
         data.save_undistorted_reconstruction([urec])
 
-
+# undistort the image
 def undistort_image(image, shot):
     """Remove radial distortion from a perspective image."""
     camera = shot.camera

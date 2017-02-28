@@ -2,6 +2,7 @@
 *.so
 xcode
 .DS_Store
+opensfm/car/segment/
 
 # Ignore generated files
 /build

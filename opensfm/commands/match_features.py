@@ -7,7 +7,7 @@ import numpy as np
 from opensfm import dataset
 from opensfm import geo
 from opensfm import matching
-import opensfm.car.match_homography as homography
+#import opensfm.car.match_homography as homography
 
 logger = logging.getLogger(__name__)
 

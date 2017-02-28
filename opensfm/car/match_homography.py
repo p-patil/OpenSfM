@@ -61,7 +61,7 @@ def load_masked(im1, data, config):
 
 
 def match_lowe(index, f2, config, reverse):
-    knn = 3
+    knn = 1
 
     search_params = dict(checks=config.get('flann_checks', 200))
     results, dists = index.knnSearch(f2, knn, params=search_params)
@@ -104,26 +104,28 @@ def homography_match_test(matches, data, p1, p2,
 
 if __name__ == "__main__":
     # some testing code
-    im1 = "0001.jpg"
-    im2 = "0002.jpg"
+    im1 = "0500.jpg"
+    im2 = "0501.jpg"
     config = {}
-    data = dataset.DataSet("/Volumes/Data/Berkeley/code_and_data/code/egomotion/OpenSfM/data/frames120_minus_blurry")
+    #data = dataset.DataSet("/Volumes/Data/Berkeley/code_and_data/code/egomotion/OpenSfM/data/frames120_minus_blurry")
+    data = dataset.DataSet("/Volumes/Data/Berkeley/code_and_data/code/egomotion/OpenSfM/data/eaef92b1-7909-46e1-9f62-5fe6eddcfcac")
+    config = {"homography_seg_relative_path":"output/results/joint"}
 
     #filter_by_segmentation_test(im1, config, data)
 
     p1, f1, i1 = load_masked(im1, data, config)
     p2, f2, i2 = load_masked(im2, data, config)
 
-    '''
+
     # version with lower ratio test one
     old_ratio = config.get('lowes_ratio', 0.6)
     config["lowes_ratio"] = config.get('homography_lowes_ratio', 0.9)
     matches = matching.match_symmetric(f1, i1, f2, i2, config)
     config["lowes_ratio"] = old_ratio
-    '''
+
 
     # version with more neighbour included
-    matches = homography_match(f1, i1, f2, i2, config)
+    #matches = homography_match(f1, i1, f2, i2, config)
 
     homography_match_test(matches, data, p1, p2, .1)
     print(matches.shape)

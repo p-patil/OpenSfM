@@ -94,7 +94,7 @@ def hood_mask_edge(path_images, downsample, std_thres):
 '''
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dataset", help="dataset dir")
+parser.add_argument("dataset", help="dataset dir")
 parser.add_argument("--image_height", default=720, help="dataset dir", required=False)
 '''
 parser.add_argument("--hood_downsample",

@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    is_ransac = args.matching_mod == "cached_ransac"
+    is_ransac = (args.matching_mod == "cached_ransac")
     data = dataset.DataSet(args.dataset)
     images = sorted(data.images())
     config = data.config
@@ -109,6 +109,3 @@ if __name__ == "__main__":
     # move away the old matches
     os.rename(os.path.join(data.data_path, "matches"),
               os.path.join(data.data_path, "matches_with_stop"))
-
-    # call the match features again
-    #subprocess.call

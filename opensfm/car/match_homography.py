@@ -1,3 +1,7 @@
+# TODO this file attempts to match the nearby homography, to increasse the number of matching keypoints
+# TODO how ever due to the strong rolling shutter effect / camera distortion at nearby pixels, we are
+# TODO not able to get a lot more mathcing points. Thus this file is not used right now.
+
 import os
 from opensfm import features
 from opensfm import dataset

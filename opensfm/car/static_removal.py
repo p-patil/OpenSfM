@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 cap = cv2.VideoCapture('/Users/yang/Downloads/visual odometry/data/incident-92db210c1997e92fb1ad5d12799636f9.mov')
 # This is not working yet, since static part usualy include road and sky as well.
+# TODO: this has a lot in similar on purpose with the generate_mask.py file
 fgbg =  cv2.BackgroundSubtractorMOG()
 while(1):
     ret, frame = cap.read()

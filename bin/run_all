@@ -8,11 +8,16 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # video_to_images.sh
 # blurry_detection.py
-# generate_mask.py & ?static_removal.py
+# generate_mask.py & simple filter hood
 
 $DIR/opensfm extract_metadata $1
 $DIR/opensfm detect_features $1
 $DIR/opensfm match_features $1
+# same frame detection & removal
+python opensfm/car/remove_stopping_frames.py $1
+# match feature again
+$DIR/opensfm match_features $1
+
 $DIR/opensfm create_tracks $1
 $DIR/opensfm reconstruct $1
 $DIR/opensfm mesh $1

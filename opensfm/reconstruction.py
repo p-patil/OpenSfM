@@ -18,7 +18,7 @@ from opensfm import matching
 from opensfm import multiview
 from opensfm import types
 from itertools import combinations
-
+import bisect
 
 logger = logging.getLogger(__name__)
 
@@ -169,6 +169,127 @@ def bundle_single_view(graph, reconstruction, shot_id, config):
     s = ba.get_shot(str(shot_id))
     shot.pose.rotation = [s.rx, s.ry, s.rz]
     shot.pose.translation = [s.tx, s.ty, s.tz]
+
+
+def bundle_local(graph, reconstruction, config, n_neighbour, gcp, shot_id):
+    """Bundle adjust a reconstruction."""
+    start = time.time()
+    ba = csfm.BundleAdjuster()
+
+    # figure out which cameras to add
+    # each value in reconstruction.cameras.values() is a camera
+    all_images = sorted([shot.id for shot in reconstruction.shots.values()])
+    loc = bisect.bisect(all_images, shot_id)
+    # get the local images
+    local_ids = all_images[max(0, loc - n_neighbour): min(len(all_images), loc + n_neighbour)]
+    print("using bundle local, with shot=%s, and local being:" % shot_id)
+    print(local_ids)
+    local_ids = set(local_ids)
+
+    # add all cameras
+    for camera in reconstruction.cameras.values():
+        in_recon = camera.id in local_ids
+
+        if camera.projection_type == 'perspective':
+            ba.add_perspective_camera(
+                str(camera.id), camera.focal, camera.k1, camera.k2,
+                camera.focal_prior, camera.k1_prior, camera.k2_prior,
+                not in_recon)
+
+        elif camera.projection_type in ['equirectangular', 'spherical']:
+            ba.add_equirectangular_camera(str(camera.id))
+
+    # add all the shots with their initial values
+    for shot in reconstruction.shots.values():
+        in_recon = shot.id in local_ids
+
+        r = shot.pose.rotation
+        t = shot.pose.translation
+        ba.add_shot(
+            str(shot.id), str(shot.camera.id),
+            r[0], r[1], r[2],
+            t[0], t[1], t[2],
+            not in_recon
+        )
+
+    var_points = set()
+    for shot_id in local_ids:
+        for track_id in graph[shot_id]:
+            if track_id in reconstruction.points:
+                if track_id not in var_points:
+                    var_points.add(track_id)
+                track = reconstruction.points[track_id]
+                x = track.coordinates
+                ba.add_point(str(track_id), x[0], x[1], x[2], False)
+                ba.add_observation(str(shot_id), str(track_id),
+                                   *graph[shot_id][track_id]['feature'])
+
+    for shot_id in reconstruction.shots:
+        if (shot_id in graph) and (shot_id not in local_ids):
+            for track in graph[shot_id]:
+                if track in var_points:
+                    ba.add_observation(str(shot_id), str(track),
+                                       *graph[shot_id][track]['feature'])
+
+    if config['bundle_use_gps']:
+        for shot in reconstruction.shots.values():
+            g = shot.metadata.gps_position
+            ba.add_position_prior(str(shot.id), g[0], g[1], g[2],
+                                  shot.metadata.gps_dop)
+
+    if config['bundle_use_gcp'] and gcp:
+        for observation in gcp:
+            if observation.shot_id in reconstruction.shots:
+                ba.add_ground_control_point_observation(
+                    str(observation.shot_id),
+                    observation.coordinates[0],
+                    observation.coordinates[1],
+                    observation.coordinates[2],
+                    observation.shot_coordinates[0],
+                    observation.shot_coordinates[1])
+
+    # set loss function, reprojection error, camera internal parameter sd
+    ba.set_loss_function(config.get('loss_function', 'SoftLOneLoss'),
+                         config.get('loss_function_threshold', 1))
+    ba.set_reprojection_error_sd(config.get('reprojection_error_sd', 0.004))
+    ba.set_internal_parameters_prior_sd(
+        config.get('exif_focal_sd', 0.01),
+        config.get('radial_distorsion_k1_sd', 0.01),
+        config.get('radial_distorsion_k2_sd', 0.01))
+
+    setup = time.time()
+
+    ba.set_num_threads(config['processes'])
+    ba.run()
+
+    run = time.time()
+    logger.debug(ba.brief_report())
+
+    # extract all values from the bundler and assign them to the reconstruction
+    for camera in reconstruction.cameras.values():
+        if camera.id in local_ids:
+            if camera.projection_type == 'perspective':
+                c = ba.get_perspective_camera(str(camera.id))
+                camera.focal = c.focal
+                camera.k1 = c.k1
+                camera.k2 = c.k2
+
+    for shot in reconstruction.shots.values():
+        if shot.id in local_ids:
+            s = ba.get_shot(str(shot.id))
+            shot.pose.rotation = [s.rx, s.ry, s.rz]
+            shot.pose.translation = [s.tx, s.ty, s.tz]
+
+    for point in reconstruction.points.values():
+        if point.id in var_points:
+            p = ba.get_point(str(point.id))
+            point.coordinates = [p.x, p.y, p.z]
+            point.reprojection_error = p.reprojection_error
+
+    teardown = time.time()
+
+    logger.debug('Bundle setup/run/teardown {0}/{1}/{2}'.format(
+        setup - start, run - setup, teardown - run))
 
 
 def pairwise_reconstructability(common_tracks, homography_inliers):
@@ -742,6 +863,7 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
 
     should_bundle = ShouldBundle(data, reconstruction)
     should_retriangulate = ShouldRetriangulate(data, reconstruction)
+    bundle_local_neighbour = data.config.get("bundle_local_neighbour", 0)
 
     while True:
         if data.config.get('save_partial_reconstructions', False):
@@ -769,7 +891,11 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
                     data.config.get('triangulation_min_ray_angle', 2.0))
 
                 if should_bundle.should(reconstruction):
-                    bundle(graph, reconstruction, None, data.config)
+                    if bundle_local_neighbour > 0:
+                        bundle_local(graph, reconstruction, data.config,
+                                     bundle_local_neighbour, None, image)
+                    else:
+                        bundle(graph, reconstruction, None, data.config)
                     # delete the keypoints with large reprojection errors.
                     # should not be a big problem, since not removing a lot in output
                     remove_outliers(graph, reconstruction, data.config)
@@ -782,7 +908,11 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
                 if should_retriangulate.should(reconstruction):
                     logger.info("Re-triangulating")
                     retriangulate(graph, reconstruction, data.config)
-                    bundle(graph, reconstruction, None, data.config)
+                    if bundle_local_neighbour > 0:
+                        bundle_local(graph, reconstruction, data.config,
+                                     bundle_local_neighbour, None, image)
+                    else:
+                        bundle(graph, reconstruction, None, data.config)
                     should_retriangulate.done(reconstruction)
                 break
         else:

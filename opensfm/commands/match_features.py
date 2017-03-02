@@ -1,6 +1,7 @@
 import logging
 from multiprocessing import Pool
 import time
+import os
 
 import numpy as np
 
@@ -21,6 +22,11 @@ class Command:
 
     def run(self, args):
         data = dataset.DataSet(args.dataset)
+        # skipping if there is a match folder
+        if os.path.exists(os.path.join(data.data_path, 'matches')):
+            print("found matches folder, skipping")
+            return
+
         images = data.images()
         exifs = {im: data.load_exif(im) for im in images}
         pairs = match_candidates_from_metadata(images, exifs, data)

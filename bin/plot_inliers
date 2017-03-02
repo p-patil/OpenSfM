@@ -992,6 +992,9 @@ if __name__ == "__main__":
     parser.add_argument('--plot_rec',
                         help='plots the reconstruction tracks for each image',
                         action='store_true')
+    parser.add_argument('--plot_on_off',
+                        help='which 3 figures out of three to plot',
+                        default='111')
 
     args = parser.parse_args()
     ds = dataset.DataSet(args.dataset)
@@ -1000,14 +1003,18 @@ if __name__ == "__main__":
     save = args.save_figs
     single = args.single_col
 
-    print 'Plotting matches for {0} - {1}...'.format(image1, image2)
-    create_matches_figure(image1, image2, ds, save, single)
 
-    print 'Plotting tracks for {0} - {1}...'.format(image1, image2)
-    create_tracks_figure(image1, image2, ds, save, single)
+    if args.plot_on_off[0] == "1":
+        print 'Plotting matches for {0} - {1}...'.format(image1, image2)
+        create_matches_figure(image1, image2, ds, save, single)
 
-    print 'Plotting reconstruction matches for {0} - {1}...'.format(image1, image2)
-    create_reconstruction_matches_figure(image1, image2, ds, save)
+    if args.plot_on_off[1] == "1":
+        print 'Plotting tracks for {0} - {1}...'.format(image1, image2)
+        create_tracks_figure(image1, image2, ds, save, single)
+
+    if args.plot_on_off[2] == "1":
+        print 'Plotting reconstruction matches for {0} - {1}...'.format(image1, image2)
+        create_reconstruction_matches_figure(image1, image2, ds, save)
 
     if args.plot_rec:
         print 'Plotting complete reconstruction tracks for {0}...'.format(image1)

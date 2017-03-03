@@ -22,10 +22,10 @@ if __name__ == "__main__":
     parser.add_argument('dataset', help='dataset to process')
     parser.add_argument('--homography_ransac_threshold',
                         help='the threshold used to match homography',
-                        default=0.002)
+                        default=0.004)
     parser.add_argument('--homography_inlier_ratio',
                         help='the lower bound of homography inlier ratio to be considered as the same frame',
-                        default=0.95)
+                        default=0.99)
     parser.add_argument('--matching_mod',
                         help='could either be cached_ransac or computed_non_ransac',
                         default="cached_ransac")
@@ -95,7 +95,6 @@ if __name__ == "__main__":
                     retained.append(im2)
                 else:
                     print("throw away %s" % im2)
-
 
     # overwrite the image list if it exists
     image_list = os.path.join(data.data_path, "image_list.txt")

@@ -8,8 +8,9 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # video_to_images.sh
 
-python opensfm/car/blurry_detection.py $1 \
-        --threshold=100.0
+# currently disable blurry detection, since it does not seem to affect a lot
+#python opensfm/car/blurry_detection.py $1 \
+#        --threshold=100.0
 python opensfm/car/generate_mask.py $1 \
         --image_height=720 \
         --hood_height=150 \
@@ -18,10 +19,11 @@ python opensfm/car/generate_mask.py $1 \
 $DIR/opensfm extract_metadata $1
 $DIR/opensfm detect_features $1
 $DIR/opensfm match_features $1
+
 # same frame detection & removal
 python opensfm/car/remove_stopping_frames.py $1 \
-        --homography_ransac_threshold=0.002 \
-        --homography_inlier_ratio=0.95 \
+        --homography_ransac_threshold=0.004 \
+        --homography_inlier_ratio=0.99 \
         --matching_mod="cached_ransac"
 
 # match feature again

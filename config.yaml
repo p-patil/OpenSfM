@@ -42,7 +42,8 @@ flann_checks: 200             # Smaller -> Faster (but might lose good matches)
 # Params for preemtive matching
 matching_gps_distance: 150            # Maximum gps distance between two images for matching
 matching_gps_neighbors: 0             # Number of images to match selected by GPS distance. Set to 0 to use no limit
-matching_time_neighbors: 2            # Yang: Number of images to match selected by time taken. Set to 0 to use no limit
+matching_time_neighbors: 0            # Number of images to match selected by time taken. Set to 0 to use no limit
+matching_order_neighbors: 2           # Yang: only matching neighbourhood images within distance 3
 preemptive_max: 200                   # Number of features to use for preemptive matching
 preemptive_threshold: 0               # If number of matches passes the threshold -> full feature matching
 
@@ -73,7 +74,7 @@ retriangulation: no                   # TODO These two lines control shouldTrian
 retriangulation_ratio: 1.25
 
 # Params for track creation
-min_track_length: 4             # Yang: Minimum number of features/images per track
+min_track_length: 2             # Yang: Minimum number of features/images per track
 
 # Params for bundle adjustment
 loss_function: SoftLOneLoss     # Loss function for the ceres problem (see: http://ceres-solver.org/modeling.html#lossfunction)

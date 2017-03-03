@@ -333,6 +333,11 @@ class DataSet:
             matches = pickle.load(fin)
         return matches
 
+    def get_maches_path(self, image):
+        loc = self.__matches_file(image)
+        loc_cache = loc.replace("matches", "matches_with_stop")
+        return loc, loc_cache
+
     def save_matches(self, image, matches):
         io.mkdir_p(self.__matches_path())
         with gzip.open(self.__matches_file(image), 'wb') as fout:

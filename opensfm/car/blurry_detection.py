@@ -11,7 +11,7 @@ def variance_of_laplacian(image):
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("dataset", required=True,
+ap.add_argument("dataset",
                 help="path to input directory of images")
 ap.add_argument("-t", "--threshold", type=float, default=100.0,
                 help="focus measures that fall below this value will be considered 'blurry'")

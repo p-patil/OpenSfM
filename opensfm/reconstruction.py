@@ -854,7 +854,6 @@ class ShouldRetriangulate:
     def done(self, reconstruction):
         self.num_points_last = len(reconstruction.points)
 
-
 def grow_reconstruction(data, graph, reconstruction, images, gcp):
     """Incrementally add shots to an initial reconstruction."""
     bundle(graph, reconstruction, None, data.config)
@@ -885,11 +884,17 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
                 logger.info("Adding {0} to the reconstruction".format(image))
                 images.remove(image)
 
+                # TODO: this threshold is arbitrarily defined
+                triangulate_shot_features(
+                    graph, reconstruction, image,
+                    0.032,
+                    data.config.get('triangulation_min_ray_angle', 2.0))
+                '''
                 triangulate_shot_features(
                     graph, reconstruction, image,
                     data.config.get('triangulation_threshold', 0.004),
                     data.config.get('triangulation_min_ray_angle', 2.0))
-
+                '''
                 if should_bundle.should(reconstruction):
                     if bundle_local_neighbour > 0:
                         bundle_local(graph, reconstruction, data.config,

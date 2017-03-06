@@ -124,6 +124,9 @@ if __name__ == "__main__":
 
     if not os.path.exists(path_mask):
         os.mkdir(path_mask)
+    else:
+        print("mask has already been generated, exit")
+        exit()
 
     if not os.path.exists(path_seg):
         # segmentation not exist yet, call dilation

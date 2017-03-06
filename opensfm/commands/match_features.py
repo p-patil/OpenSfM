@@ -22,10 +22,13 @@ class Command:
 
     def run(self, args):
         data = dataset.DataSet(args.dataset)
-        # skipping if there is a match folder
+        # even if there is a matching folder, we have to gone through
+        # to make sure we add every new matches into it.
+        '''
         if os.path.exists(os.path.join(data.data_path, 'matches')):
             print("found matches folder, skipping")
             return
+        '''
 
         images = data.images()
         exifs = {im: data.load_exif(im) for im in images}
@@ -176,9 +179,15 @@ def match(args):
     lowes_ratio = config['lowes_ratio']
     preemptive_lowes_ratio = config['preemptive_lowes_ratio']
 
-    im1_matches = {}
+    if ctx.data.matches_exists(im1):
+        im1_matches = ctx.data.load_matches(im1)
+    else:
+        im1_matches = {}
 
     for im2 in candidates:
+        if im2 in im1_matches:
+            continue
+
         # preemptive matching
         if preemptive_threshold > 0:
             t = time.time()

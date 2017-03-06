@@ -884,7 +884,7 @@ def grow_reconstruction(data, graph, reconstruction, images, gcp):
                 logger.info("Adding {0} to the reconstruction".format(image))
                 images.remove(image)
 
-                # TODO: this threshold is arbitrarily defined
+                # TODO: looser threshold is better, but we haven't determined which is best
                 triangulate_shot_features(
                     graph, reconstruction, image,
                     0.032,

@@ -11,6 +11,14 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 # currently disable blurry detection, since it does not seem to affect a lot
 #python opensfm/car/blurry_detection.py $1 \
 #        --threshold=100.0
+
+# if there is an image_list.txt.with_stop, then copy it to image_list.txt
+if [ -e $1"/image_list.txt.with_stop" ]
+then
+    echo "overwriting image_list.txt with image_list.txt.with_stop"
+    yes | cp -rf $1"/image_list.txt.with_stop" $1"/image_list.txt"
+fi
+
 python opensfm/car/generate_mask.py $1 \
         --image_height=720 \
         --hood_height=150 \
@@ -20,10 +28,11 @@ $DIR/opensfm extract_metadata $1
 $DIR/opensfm detect_features $1
 
 # same frame detection & removal
+# TODO: determine good value for inlier ratio
 python opensfm/car/remove_stopping_frames.py $1 \
         --homography_ransac_threshold=0.004 \
-        --homography_inlier_ratio=0.95 \
-        --matching_mod="cached_ransac"
+        --homography_inlier_ratio=0.90 \
+        --matching_mod="good"
 
 $DIR/opensfm match_features $1
 $DIR/opensfm create_tracks $1

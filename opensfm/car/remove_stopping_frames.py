@@ -4,6 +4,7 @@ import argparse
 from opensfm import matching
 import cv2
 import subprocess
+import shutil
 
 def homography_inlier_ratio(p1, p2, matches, args):
     # test whether this pair forms a homography
@@ -26,14 +27,14 @@ if __name__ == "__main__":
                         default=0.004)
     parser.add_argument('--homography_inlier_ratio',
                         help='the lower bound of homography inlier ratio to be considered as the same frame',
-                        default=0.99)
+                        default=0.90)
     parser.add_argument('--matching_mod',
-                        help='could either be cached_ransac or computed_ransac',
-                        default="cached_ransac")
+                        help='could either be good or fast',
+                        default="good")
 
     args = parser.parse_args()
 
-    is_cached = (args.matching_mod == "cached_ransac")
+    is_good = (args.matching_mod == "good")
     data = dataset.DataSet(args.dataset)
     images = sorted(data.images())
     config = data.config
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     retained = [images[0]]
     indexes = [0]
 
-    if not is_cached:
+    if is_good:
         robust_matching_min_match = config['robust_matching_min_match']
         cameras = data.load_camera_models()
         exifs = {im: data.load_exif(im) for im in images}
@@ -53,28 +54,43 @@ if __name__ == "__main__":
             # while the next image exists
             p1, f1, c1 = data.load_features(im1)
             i1 = data.load_feature_index(im1, f1)
+            # get the cached features
+            if data.matches_exists(im1):
+                im1_matches = data.load_matches(im1)
+            else:
+                im1_matches = {}
+            modified = False
 
             for im2i in range(im1i+1, len(images)):
                 # match this image against the inow
                 im2 = images[im2i]
                 p2, f2, c2 = data.load_features(im2)
-                i2 = data.load_feature_index(im2, f2)
+                if im2 not in im1_matches:
+                    modified = True
+                    i2 = data.load_feature_index(im2, f2)
 
-                matches = matching.match_symmetric(f1, i1, f2, i2, config)
+                    matches = matching.match_symmetric(f1, i1, f2, i2, config)
 
-                if len(matches) < robust_matching_min_match:
-                    # this image doesn't have enough matches with the first one
-                    # i.e. either of them is broken, to be safe throw away both
-                    print("%s and %s don't have enough matches, skipping" % (im1, im2))
-                    im1i = im2i + 1
-                    break
+                    if len(matches) < robust_matching_min_match:
+                        # this image doesn't have enough matches with the first one
+                        # i.e. either of them is broken, to be safe throw away both
+                        print("%s and %s don't have enough matches, skipping" % (im1, im2))
+                        im1i = im2i + 1
+                        break
 
-                # robust matching
-                camera1 = cameras[exifs[im1]['camera']]
-                camera2 = cameras[exifs[im2]['camera']]
+                    # robust matching
+                    camera1 = cameras[exifs[im1]['camera']]
+                    camera2 = cameras[exifs[im2]['camera']]
 
-                rmatches = matching.robust_match(p1, p2, camera1, camera2, matches,
-                                                 config)
+                    rmatches = matching.robust_match(p1, p2, camera1, camera2, matches,
+                                                     config)
+                    if len(rmatches) < robust_matching_min_match:
+                        im1_matches[im2] = []
+                    else:
+                        im1_matches[im2] = rmatches
+                    #print("computed match between %s and %s" % (im1, im2))
+                else:
+                    rmatches = im1_matches[im2]
 
                 if len(rmatches) < robust_matching_min_match:
                     print("%s and %s don't have enough robust matches, skipping" % (im1, im2))
@@ -91,30 +107,28 @@ if __name__ == "__main__":
                     break
                 else:
                     print("throw away %s" % im2)
+            else:
+                im1i += 1
+
+            if modified:
+                data.save_matches(im1, im1_matches)
     else:
-        # first check whether we should run this program
-        if not os.path.exists(os.path.join(data.data_path, "matches")):
-            print("run the matching first, then remove stopping frames")
-            # make a copy of the old config
-            config_path = os.path.join(data.data_path, "config.yaml")
-            config_bak  = config_path + ".bak"
-            os.rename(config_path, config_bak)
+        # we should run neighbourhood matching anyway
+        # make a copy of the old config
+        config_path = os.path.join(data.data_path, "config.yaml")
+        config_bak  = config_path + ".bak"
+        os.rename(config_path, config_bak)
 
-            # replace the line with neighbour 2
-            subprocess.call(['sed -e "s/matching_order_neighbors:.*/matching_order_neighbors: 2/" ' +
-                             config_bak + ' > ' + config_path], shell=True)
+        # replace the line with neighbour 2
+        subprocess.call(['sed -e "s/matching_order_neighbors:.*/matching_order_neighbors: 2/" ' +
+                         config_bak + ' > ' + config_path], shell=True)
 
-            subprocess.call(["bin/opensfm", "match_features", args.dataset])
+        subprocess.call(["bin/opensfm", "match_features", args.dataset])
 
-            # remove the replaced file
-            os.remove(config_path)
-            # move back
-            os.rename(config_bak, config_path)
-
-
-        if os.path.exists(os.path.join(data.data_path, "matches_with_stop")):
-            print("stopping frames has been removed, skpping")
-            exit()
+        # remove the replaced file
+        os.remove(config_path)
+        # move back
+        os.rename(config_bak, config_path)
 
         # using the loaded features after ransac
         # slightly different logic here, we use the nearby frames' matches only
@@ -138,10 +152,6 @@ if __name__ == "__main__":
                 else:
                     print("throw away %s" % im2)
 
-        # move away the old matches
-        os.rename(os.path.join(data.data_path, "matches"),
-                  os.path.join(data.data_path, "matches_with_stop"))
-
     # TODO: investigate whether need to remove further stop frames
     '''
     # refine the list of remaining images by removing the isolated frames
@@ -156,11 +166,6 @@ if __name__ == "__main__":
 
     # overwrite the image list if it exists
     image_list = os.path.join(data.data_path, "image_list.txt")
-    if os.path.exists(image_list):
-        os.rename(image_list,
-                  os.path.join(data.data_path, "image_list.txt.with_stop"))
     with open(image_list, "w") as f:
         for im in retained:
             f.write("images/"+im+"\n")
-
-

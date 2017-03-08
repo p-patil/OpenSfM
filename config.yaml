@@ -32,7 +32,7 @@ hahog_edge_threshold: 10
 # Params for general matching
 lowes_ratio: 0.8              # Ratio test for matches
 preemptive_lowes_ratio: 0.6   # Ratio test for preemptive matches
-matcher_type: FLANN           # FLANN or BRUTEFORCE
+matcher_type: BRUTEFORCE      # Yang: FLANN or BRUTEFORCE
 
 # Params for FLANN matching
 flann_branching: 16           # See OpenCV doc

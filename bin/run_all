@@ -31,7 +31,7 @@ $DIR/opensfm detect_features $1
 # TODO: determine good value for inlier ratio
 python opensfm/car/remove_stopping_frames.py $1 \
         --homography_ransac_threshold=0.004 \
-        --homography_inlier_ratio=0.90 \
+        --homography_inlier_ratio=0.85 \
         --matching_mod="good"
 
 $DIR/opensfm match_features $1

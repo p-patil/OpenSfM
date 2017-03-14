@@ -282,7 +282,8 @@ def extract_features(color_image, config, mask=None):
 
     # remove the key points that is not in the mask, and
     # transform coordinate such that x' = (x-width/2) / max(width, height), i.e. centering
-    return mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask)
+    return [mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask),
+            mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], None)]
 
 
 def build_flann_index(features, config):

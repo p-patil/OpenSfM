@@ -49,10 +49,28 @@ def detect(args):
         else:
             print("Not found mask for the image")
         preemptive_max = data.config.get('preemptive_max', 200)
-        p_unsorted, f_unsorted, c_unsorted = features.extract_features(
-            data.image_as_array(image), data.config, mask)
+        #[p_unsorted, f_unsorted, c_unsorted, p_nomask, f_nomask, c_nomask]  = 
+        all_content = features.extract_features(data.image_as_array(image), data.config, mask)
+        print(len(all_content), 'length of saving contents')
+        p_unsorted, f_unsorted, c_unsorted = all_content[0]
+        p_nomask, f_nomask, c_nomask = all_content[1]
         if len(p_unsorted) == 0:
             return
+
+
+
+        size_nomask = p_nomask[:, 2]
+        order_nomask = np.argsort(size_nomask)
+        p_nomask = p_nomask[order_nomask, :]
+        f_nomask = f_nomask[order_nomask, :]
+        c_nomask = c_nomask[order_nomask, :]
+        p_nomask_pre = p_nomask[-preemptive_max:]
+        f_nomask_pre = f_nomask[-preemptive_max:]
+        data.save_features(image+'_nomask', p_nomask, f_nomask, c_nomask)
+        data.save_preemptive_features(image+'_nomask', p_nomask_pre, f_nomask_pre)
+        index_nomask = features.build_flann_index(f_nomask, data.config)
+        data.save_feature_index(image+'_nomask', index_nomask)
+
 
         size = p_unsorted[:, 2]
         order = np.argsort(size)

@@ -10,6 +10,7 @@ import json
 import uuid
 import cv2
 import csfm
+import copy
 
 from opensfm import context
 
@@ -71,13 +72,13 @@ def denormalized_image_coordinates(norm_coords, width, height):
 
 def mask_and_normalize_features(points, desc, colors, width, height, mask=None):
     """Remove features outside the mask and normalize image coordinates."""
-
     if mask is not None:
         ids = np.array([_in_mask(point, width, height, mask) for point in points])
         points = points[ids]
         desc = desc[ids]
         colors = colors[ids]
 
+    points = copy.deepcopy(points)
     points[:, :2] = normalized_image_coordinates(points[:, :2], width, height)
     return points, desc, colors
 

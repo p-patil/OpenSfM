@@ -12,6 +12,7 @@ import cv2
 from opensfm import io
 from opensfm import config
 from opensfm import context
+from opensfm import features
 
 
 class DataSet:
@@ -106,6 +107,32 @@ class DataSet:
         else:
             mask = None
         return mask
+
+    def seg_as_array(self, image, relative_seg_path):
+        image_path = self.image_files[image]
+        head, tail = os.path.split(image_path)
+        seg_path = os.path.join(head, relative_seg_path, image.split('.')[0] + ".png")
+        seg = cv2.imread(seg_path)
+
+        if len(seg.shape) == 3:
+            seg = seg.max(axis=2)
+
+        return seg
+
+    def filter_by_seg(self, image, points, func, relative_seg_path):
+        # return a list of true or false indicating whether the point survive after mask
+        seg = self.seg_as_array(image, relative_seg_path)
+
+        points = points[:, 0:2]
+        points = features.denormalized_image_coordinates(points, seg.shape[1], seg.shape[0])
+
+        ans = []
+        for p in points:
+            if func(seg[int(p[1]), int(p[0])]):
+                ans.append(True)
+            else:
+                ans.append(False)
+        return np.array(ans)
 
     def _depthmap_path(self):
         return os.path.join(self.data_path, 'depthmaps')
@@ -521,3 +548,25 @@ def save_tracks_graph(fileobj, graph):
                 r, g, b = data['feature_color']
                 fileobj.write('%s\t%s\t%d\t%g\t%g\t%g\t%g\t%g\n' % (
                     str(image), str(track), fid, x, y, r, g, b))
+
+
+def observations_to_tracks(graph, image, fids, points_original):
+    d = {}
+    for track, data in graph[image].items():
+        fid = int(data['feature_id'])
+        d[fid] = track
+
+        if True:
+            # validate we have the correct idea
+            original = points_original[fid]
+            saved = data["feature"]
+            assert abs(original[0] - saved[0])<1e-6 and abs(original[1] - saved[1])<1e-6
+
+    ans = []
+    selected = []
+    for id in fids:
+        id = int(id)
+        if id in d:
+            ans.append(d[id])
+            selected.append(id)
+    return ans, selected

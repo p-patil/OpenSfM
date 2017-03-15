@@ -19,29 +19,7 @@ def filter_by_segmentation(points, imname, config, data):
     # return a 0-1 array of whehter  this point belongs to the mask
     homography_seg_relative_path=config.get("homography_seg_relative_path",
                                             "output/results/frontend_vgg/")
-    image_path = data.image_files[imname]
-    head, tail = os.path.split(image_path)
-    seg_path = os.path.join(head, homography_seg_relative_path, imname.split('.')[0] + ".png")
-
-    im = Image.open(seg_path)
-
-    if False:
-        # debug
-        b=Image.fromarray(np.array(im)*10)
-        b.show()
-
-    pix = im.load()
-    width, height = im.size
-    points = points[:, 0:2]
-    points = features.denormalized_image_coordinates(points, width, height)
-
-    ans = []
-    for p in points:
-        if pix[int(p[0]), int(p[1])] == 0:
-            ans.append(True)
-        else:
-            ans.append(False)
-    return ans
+    return data.filter_by_seg(imname, points, lambda x: x==0, homography_seg_relative_path)
 
 def filter_by_segmentation_test(im1, config, data):
     p1, f1, c1 = data.load_features(im1)

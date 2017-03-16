@@ -58,7 +58,7 @@ def detect(args):
             return
 
 
-
+        '''
         size_nomask = p_nomask[:, 2]
         order_nomask = np.argsort(size_nomask)
         p_nomask = p_nomask[order_nomask, :]
@@ -70,7 +70,7 @@ def detect(args):
         data.save_preemptive_features(image+'_nomask', p_nomask_pre, f_nomask_pre)
         index_nomask = features.build_flann_index(f_nomask, data.config)
         data.save_feature_index(image+'_nomask', index_nomask)
-
+        '''
 
         size = p_unsorted[:, 2]
         order = np.argsort(size)
@@ -81,5 +81,7 @@ def detect(args):
         f_pre = f_sorted[-preemptive_max:]
         data.save_features(image, p_sorted, f_sorted, c_sorted)
         data.save_preemptive_features(image, p_pre, f_pre)
-        index = features.build_flann_index(f_sorted, data.config)
-        data.save_feature_index(image, index)
+
+        if data.config.get('matcher_type', "BRUTEFORCE") == "FLANN":
+            index = features.build_flann_index(f_sorted, data.config)
+            data.save_feature_index(image, index)

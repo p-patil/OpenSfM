@@ -13,6 +13,7 @@ opensfm/car/segment/
 /.idea
 /bin/plot_matchesc
 /bin/plot_featuresc
+*ipynb_checkpoints*
 
 # Ignore the data folder, but not the berlin example.
 data/*

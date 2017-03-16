@@ -8,6 +8,9 @@ if __name__ == "__main__":
 
     for dir in os.listdir(base_path):
         full = os.path.join(base_path, dir)
+        if not os.path.isdir(full):
+            continue
+        
         mask = os.path.join(full, "masks")
         if os.path.exists(mask):
             if len(os.listdir(mask))< 1000:

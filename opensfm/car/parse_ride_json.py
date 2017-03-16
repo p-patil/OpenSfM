@@ -84,3 +84,11 @@ def visLoc(locs, label="NotSet"):
     plt.ylabel("South -- North")
     #plt.gca().set_aspect('equal', adjustable='box')
     plt.show()
+
+    return plt
+
+def generate_gps_figure(json_path, video_filename, output_dir):
+    res = get_gps(json_path, video_filename)
+    locs = np.array([res['latitude'], res['longitude']]).T
+    plt = visLoc(locs)
+    plt.savefig(os.path.join(output_dir, "gps_vis.png"))

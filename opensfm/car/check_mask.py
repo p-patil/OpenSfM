@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from parse_ride_json import generate_gps_figure
 
 if __name__ == "__main__":
     base_path = "/data/yang/data/opensfm"
@@ -13,3 +14,6 @@ if __name__ == "__main__":
                 print full, "bad mask"
         if os.path.exists(os.path.join(full, "reconstruction.meshed.json")):
             print "finished", dir
+        generate_gps_figure(os.path.join(full, "ride.json"),
+                            dir+".mov",
+                            full)

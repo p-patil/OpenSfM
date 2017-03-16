@@ -15,7 +15,7 @@ then
 fi
 
 # mov to images
-MOV_PATH=$(ls $1 | grep mov)
+MOV_PATH=$( ls "$1" | grep "mov" | more)
 opensfm/car/video_to_images.sh $1"/"$MOV_PATH $1"/images"
 
 # add gps to images

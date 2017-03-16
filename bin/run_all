@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 
+echo $1
+echo $2
+
 set -e
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 # rm_generated.sh
 
-# video_to_images.sh
+if [ ! -f $1"/config.yaml" ];
+then
+    cp config.yaml $1"/config.yaml"
+fi
+
+# mov to images
+MOV_PATH=$(ls $1 | grep mov)
+opensfm/car/video_to_images.sh $1"/"$MOV_PATH $1"/images"
 
 # currently disable blurry detection, since it does not seem to affect a lot
 #python opensfm/car/blurry_detection.py $1 \
@@ -22,7 +32,8 @@ fi
 python opensfm/car/generate_mask.py $1 \
         --image_height=720 \
         --hood_height=150 \
-        --seg_relative_path="output/results/joint"
+        --seg_relative_path="output/results/joint" \
+        --gpu=$2
 
 $DIR/opensfm extract_metadata $1
 $DIR/opensfm detect_features $1

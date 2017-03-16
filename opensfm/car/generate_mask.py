@@ -114,6 +114,10 @@ parser.add_argument("--seg_relative_path",
                     default="output/results/joint",
                     help="the path of segmentations relative to images",
                     required=False)
+parser.add_argument("--gpu",
+                    default="0",
+                    help="which GPU to use to run Dilation",
+                    required=False)
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -123,14 +127,18 @@ if __name__ == "__main__":
     path_mask = os.path.join(base, "masks")
 
     if not os.path.exists(path_mask):
+        if not os.path.exists(path_seg):
+            # segmentation not exist yet, call dilation
+            e = subprocess.call(
+                ["opensfm/car/generate_segmentation.sh", path_images, str(args.image_height), str(args.gpu)])
+            if e:
+                print "some error happend when calling the segmentation generation"
+                exit(0)
+
         os.mkdir(path_mask)
     else:
         print("mask has already been generated, exit")
         exit()
-
-    if not os.path.exists(path_seg):
-        # segmentation not exist yet, call dilation
-        subprocess.call(["opensfm/car/generate_segmentation.sh", path_images, str(args.image_height)])
 
     # convert segmentation into masks
     for item in sorted(os.listdir(path_seg)):

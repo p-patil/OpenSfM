@@ -73,7 +73,7 @@ def get_interp_lat_lon(res, hz):
     # return an N*2 array
     return np.array([latI, lonI]).T
 
-def visLoc(locs, label="NotSet"):
+def visLoc(locs, label="NotSet", show=True):
     axis=lambda i: [loc[i] for loc in locs]
     plt.plot(axis(0), axis(1), 'ro')
     #print(axis(0)[204:208])
@@ -83,12 +83,13 @@ def visLoc(locs, label="NotSet"):
     plt.xlabel("West -- East")
     plt.ylabel("South -- North")
     #plt.gca().set_aspect('equal', adjustable='box')
-    plt.show()
+    if show:
+        plt.show()
 
     return plt
 
 def generate_gps_figure(json_path, video_filename, output_dir):
     res = get_gps(json_path, video_filename)
     locs = np.array([res['latitude'], res['longitude']]).T
-    plt = visLoc(locs)
+    plt = visLoc(locs, "raw GPS", False)
     plt.savefig(os.path.join(output_dir, "gps_vis.png"))

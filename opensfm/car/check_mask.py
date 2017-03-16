@@ -23,7 +23,6 @@ if __name__ == "__main__":
 
         json_path = os.path.join(full, "ride.json")
         if os.path.exists(json_path):
-            video_name = dir.split("_")[0]
             generate_gps_figure(json_path,
-                                video_name+".mov",
+                                dir+".mov",
                                 full)

@@ -75,6 +75,7 @@ def get_interp_lat_lon(res, hz):
 
 def visLoc(locs, label="NotSet", show=True):
     axis=lambda i: [loc[i] for loc in locs]
+    plt.figure()
     plt.plot(axis(0), axis(1), 'ro')
     #print(axis(0)[204:208])
     #print(axis(1)[204:208])

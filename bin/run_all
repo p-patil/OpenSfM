@@ -18,6 +18,9 @@ fi
 MOV_PATH=$(ls $1 | grep mov)
 opensfm/car/video_to_images.sh $1"/"$MOV_PATH $1"/images"
 
+# add gps to images
+python opensfm/car/add_gps_to_exif.py $1
+
 # currently disable blurry detection, since it does not seem to affect a lot
 #python opensfm/car/blurry_detection.py $1 \
 #        --threshold=100.0

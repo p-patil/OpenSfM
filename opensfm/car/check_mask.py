@@ -10,4 +10,6 @@ if __name__ == "__main__":
         mask = os.path.join(full, "masks")
         if os.path.exists(mask):
             if len(os.listdir(mask))< 1000:
-                print full
+                print full, "bad mask"
+        if os.path.exists(os.path.join(full, "reconstruction.meshed.json")):
+            print "finished", dir

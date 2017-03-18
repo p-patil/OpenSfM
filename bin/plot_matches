@@ -26,8 +26,8 @@ def plot_matches(im1, im2, p1, p2, show_correspondence):
         for a, b in zip(p1, p2):
             pl.plot([a[0], b[0] + w1], [a[1], b[1]], 'c')
 
-    pl.plot(p1[:, 0], p1[:, 1], 'ob')
-    pl.plot(p2[:, 0] + w1, p2[:, 1], 'ob')
+    pl.plot(p1[:, 0], p1[:, 1], 'or')
+    pl.plot(p2[:, 0] + w1, p2[:, 1], 'or')
 
 
 if __name__ == "__main__":

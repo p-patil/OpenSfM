@@ -41,7 +41,7 @@ def detect(args):
     logger.info('Extracting {} features for image {}'.format(
         data.feature_type().upper(), image))
 
-    if not data.feature_index_exists(image):
+    if not data.features_exist(image):
         mask = data.mask_as_array(image)
         if mask is not None:
             print("found mask for image:%s" % image)

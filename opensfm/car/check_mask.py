@@ -10,6 +10,10 @@ if __name__ == "__main__":
     #base_path = "/data/yang/data/opensfm"
 
     for dir in os.listdir(base_path):
+        if "_" in dir:
+            # filter out some folder with GPS
+            continue
+
         full = os.path.join(base_path, dir)
         if not os.path.isdir(full):
             continue

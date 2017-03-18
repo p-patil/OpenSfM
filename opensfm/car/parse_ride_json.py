@@ -83,7 +83,7 @@ def visLoc(locs, label="NotSet", show=True):
     plt.title("Moving paths from " + label)
     plt.xlabel("West -- East")
     plt.ylabel("South -- North")
-    #plt.gca().set_aspect('equal', adjustable='box')
+    plt.gca().set_aspect('equal', 'datalim')
     if show:
         plt.show()
 

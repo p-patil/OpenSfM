@@ -17,6 +17,7 @@ opensfm/car/segment/
 *nfs*
 
 # Ignore the data folder, but not the berlin example.
+data_sync/
 data/*
 data/berlin/*
 !data/berlin

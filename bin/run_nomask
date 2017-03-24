@@ -38,7 +38,7 @@ fi
 #        --seg_relative_path="output/results/joint" \
 #        --gpu=$2
 
-#$DIR/opensfm extract_metadata $1
+$DIR/opensfm extract_metadata $1
 $DIR/opensfm detect_features $1
 
 # same frame detection & removal

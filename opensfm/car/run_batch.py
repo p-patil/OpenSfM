@@ -14,7 +14,10 @@ def filter_dirs(dirs, program):
                 continue
         elif program == "dso" or program == "orb":
             if os.path.exists(os.path.join(d, program+".txt")):
-                continue
+                with open(os.path.join(d, program+".txt"), "r") as f:
+                    line = f.readline()
+                if line.strip() != "error":
+                    continue
         ans.append(d)
     return ans
 
@@ -43,7 +46,8 @@ if __name__ == "__main__":
                 e = subprocess.call(["bin/run_seg.sh", dataset, gpus[this % len(gpus)]])
             elif program == "opensfm":
                 e=subprocess.call(["bin/run_all", dataset, gpus[this%len(gpus)]])
-            elif program == "dso":
+            elif program == "dso" or program == "dso_mask":
+                mask_flag = "mask=../masks/" if "mask" in program else ""
                 relative = "dso/"
                 e=subprocess.call([ relative+"build/bin/dso_dataset",
                                     "files="+dataset+"/images",
@@ -51,10 +55,11 @@ if __name__ == "__main__":
                                     "preset=2",
                                     "mode=1",
                                     "nogui=1",
-                                    "nolog=1"])
+                                    "nolog=1",
+                                    mask_flag])
                 if not os.path.exists("result.txt"):
                     subprocess.call(["echo 'error' > result.txt "], shell=True)
-                os.rename("result.txt", os.path.join(dataset, "dso.txt"))
+                os.rename("result.txt", os.path.join(dataset, program+".txt"))
             elif program == "orb":
                 relative = "ORB_SLAM2/"
 

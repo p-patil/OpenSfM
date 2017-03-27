@@ -60,18 +60,23 @@ if __name__ == "__main__":
                 if not os.path.exists("result.txt"):
                     subprocess.call(["echo 'error' > result.txt "], shell=True)
                 os.rename("result.txt", os.path.join(dataset, program+".txt"))
-            elif program == "orb":
-                relative = "ORB_SLAM2/"
+            elif program == "orb" or program == "orb_mask":
+                if len(sys.argv)>=5:
+                    relative = sys.argv[4]
+                else:
+                    relative = "ORB_SLAM2/"
 
+                mask_flag = "../masks/" if "mask" in program else ""
                 e = subprocess.call([relative + "Examples/Monocular/mono_nexar",
                                      relative + "Vocabulary/ORBvoc.txt",
                                      relative + "Examples/Monocular/nexar.yaml",
                                      dataset + "/images",
-                                     "0"])
+                                     "0",
+                                     mask_flag])
                 outname = "KeyFrameTrajectory.txt"
                 if not os.path.exists(outname):
                     subprocess.call(["echo 'error' > " + outname], shell=True)
-                os.rename(outname, os.path.join(dataset, "orb.txt"))
+                os.rename(outname, os.path.join(dataset, program+".txt"))
             else:
                 raise ValueError("invalid program parameter")
 

@@ -1,6 +1,8 @@
 import os
 import subprocess
 import sys
+import eval
+import pickle
 
 def filter_dirs(dirs, program):
     ans = []
@@ -18,6 +20,7 @@ def filter_dirs(dirs, program):
                     line = f.readline()
                 if line.strip() != "error":
                     continue
+
         ans.append(d)
     return ans
 
@@ -38,6 +41,11 @@ if __name__ == "__main__":
     dirs = sorted(dirs)
     dirs = filter_dirs(dirs, program)
 
+    results = {}
+    if program == "eval_all" and os.path.exists("evaluated.pkl"):
+        with open("evaluated.pkl", "rb") as f:
+            results = pickle.load(f)
+
     for i, dataset in enumerate(dirs):
         if i%modn == this:
             print dataset
@@ -47,10 +55,25 @@ if __name__ == "__main__":
             elif program == "opensfm":
                 e=subprocess.call(["bin/run_all", dataset, gpus[this%len(gpus)]])
             elif program == "dso" or program == "dso_mask":
+                # generate the time stamps
+                with open(os.path.join(dataset, "images") + "/times.txt", "w") as f0:
+                    largest = -1
+                    for f in os.listdir(os.path.join(dataset, "images")):
+                        if f.endswith("jpg"):
+                            id = int(f.split(".")[0])
+                            if id>largest:
+                                largest = id
+                    for i in range(largest):
+                        f0.write(str(i)+ " "+str(i*1.0/30)+"\n")
+
                 mask_flag = "mask=../masks/" if "mask" in program else ""
-                relative = "dso/"
+                if len(sys.argv)>=5:
+                    relative = sys.argv[4]
+                else:
+                    relative = "dso/"
+
                 e=subprocess.call([ relative+"build/bin/dso_dataset",
-                                    "files="+dataset+"/images",
+                                    "files="+dataset+"/images/",
                                     "calib="+relative+"camera_nexar.txt",
                                     "preset=2",
                                     "mode=1",
@@ -77,6 +100,26 @@ if __name__ == "__main__":
                 if not os.path.exists(outname):
                     subprocess.call(["echo 'error' > " + outname], shell=True)
                 os.rename(outname, os.path.join(dataset, program+".txt"))
+            elif program == "eval_all":
+                if dataset not in results:
+                    results[dataset] = {}
+
+                for method in ["opensfm", "orb", "dso"]:
+                    if method not in results[dataset]:
+                        results[dataset][method] = {}
+
+                    for mask in ["true", "false"]:
+                        print(method, mask)
+
+                        if mask not in results[dataset][method]:
+                            results[dataset][method][mask] = eval.eval_api(method, dataset, mask)
+                            print(results[dataset][method][mask])
+                        else:
+                            print("cached", results[dataset][method][mask])
+
+                        with open("evaluated.pkl", "wb") as f:
+                            pickle.dump(results, f)
+                e=0
             else:
                 raise ValueError("invalid program parameter")
 

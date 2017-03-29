@@ -153,13 +153,13 @@ def fit_plane(T):
     plane = np.linalg.svd(T)
     #print(plane[0])
     plane = plane[0][:,2]
-    print(plane)
+    #print(plane)
     
     a = np.ones([1,l]) 
     new_T = np.concatenate((T,a), axis = 0)
     new_plane = np.linalg.svd(new_T)
     new_plane = new_plane[0][:,2]
-    print(new_plane)
+    #print(new_plane)
     return plane
 
 def compute_R(vec_1, vec_2):
@@ -267,10 +267,19 @@ def rotate_gps(loc, T_, Name):
         loc_scale_new[:,0:2] = new_pos.T
     return loc_scale_new
 
-def evaluation_rel(loc_1, loc_2, image_list_file):
+def evaluation_rel(loc_1, loc_2, index):
     loc_gps = loc_1[:,:2]
     loc_rec = np.array(loc_2)[:,:2]
-    index = []
+    if(len(index) != len(loc_rec)):
+        return "bad_index", None, None, None
+
+    outlier = 0
+    for idx in index[::-1]:
+        if idx >= len(loc_gps):
+            outlier += 1
+    if outlier>0:
+        loc_rec = loc_rec[:-outlier,:]
+
     error_r = []
     angle = []
     a_1 = []
@@ -278,94 +287,89 @@ def evaluation_rel(loc_1, loc_2, image_list_file):
     t_rec = []
     t_gps = []
     error_trans = []
-    
-    with open(image_list_file) as f:
-        content = f.readlines()
-        for item in content:
-            imname = item.split('/')[1]
-            imnum = imname.split('.')[0]
-            index.append(int(imnum)-1)
-    
+
+    '''
     def unit_vector(vector):
         """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector)
-    
+
     def angle_between(v1, v2):
         v1_u = unit_vector(v1)
         v2_u = unit_vector(v2)
         
         angle = np.math.atan2(np.linalg.det([v1_u,v2_u]),np.clip(np.dot(v1_u,v2_u), -1.0, 1.0))
-        '''
-        if np.degrees(angle) <=-90 :
-            angle = 180 + np.degrees(angle)
-        elif np.degrees(angle) >= 90:
-            angle = 180 - np.degrees(angle) '''
+        #angle = np.arccos( np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+        #if np.degrees(angle) <=-90 :
+        #    angle = 180 + np.degrees(angle)
+        #elif np.degrees(angle) >= 90:
+        #    angle = 180 - np.degrees(angle)
             
         return np.degrees([angle])[0]
-    
-    orig_list = range(0,len(loc_rec)-16,15)
-    for i in orig_list:
-        
-        for j in range(i+15,len(loc_rec),15):
-            ## rotational ##
-            if i == 0:
-                start_rec = loc_rec[j] - loc_rec[i]
-                start_gps = loc_gps[index[j]] - loc_gps[index[i]]
-                
-            elif j == i+15:
-                start_rec = vec_rec
-                start_gps = vec_gps
+    '''
+    def good_range(ans):
+        if ans > 180:
+            ans -= 360
+        elif ans < -180:
+            ans += 360
+        return ans
 
+    def angle_between(p1, p2):
+        ang1 = np.arctan2(*p1[::-1])
+        ang2 = np.arctan2(*p2[::-1])
+        ans = np.rad2deg((ang1 - ang2) % (2 * np.pi))
+        return good_range(ans)
+
+    hh = 5
+    #orig_list = range(hh,len(loc_rec)-hh,hh)
+    orig_list = range(hh, len(loc_rec) - hh)
+    if len(orig_list)<=2*hh:
+        return "too_few_points", None, None, None
+
+    # initial vector
+    start_rec = loc_rec[hh] - loc_rec[0]
+    start_gps = loc_gps[index[hh]] - loc_gps[index[0]]
+
+    for i in orig_list:
+        for j in range(i + hh, len(loc_rec)):
             vec_rec = loc_rec[j] - loc_rec[i]
             vec_gps = loc_gps[index[j]] - loc_gps[index[i]]
-            
-            #trans_rec = np.linalg.norm(vec_rec)
-            #trans_gps = np.linalg.norm(vec_gps)
-            
-            
-            
+            # trans_rec = np.linalg.norm(vec_rec)
+            # trans_gps = np.linalg.norm(vec_gps)
+
             angle_rec = angle_between(vec_rec, start_rec)
             angle_gps = angle_between(vec_gps, start_gps)
             if angle_rec < -90 or angle_rec > 90:
-                
-                orig_list.remove(j)
-                
+                #orig_list.remove(j)
                 continue
             else:
-                #t_rec.append(trans_rec)
-                #t_gps.append(trans_gps)
+                # t_rec.append(trans_rec)
+                # t_gps.append(trans_gps)
                 break
+        start_rec = vec_rec
+        start_gps = vec_gps
+
         a_1.append(angle_rec)
         a_2.append(angle_gps)
         
-        angle_error = angle_rec - angle_gps
+        angle_error = good_range(angle_rec - angle_gps)
         angle.append(angle_error)
-    
-    for i in range(len(loc_rec)):
-        
-        for j in range(i+1,len(loc_rec)):
-            ## rotational ##
-            if i == 0:
-                start_rec = loc_rec[j] - loc_rec[i]
-                start_gps = loc_gps[index[j]] - loc_gps[index[i]]
-                
-            elif j == i+1:
-                start_rec = vec_rec
-                start_gps = vec_gps
 
-            vec_rec = loc_rec[j] - loc_rec[i]
-            vec_gps = loc_gps[index[j]] - loc_gps[index[i]]
-            
-            trans_rec = np.linalg.norm(vec_rec)
-            trans_gps = np.linalg.norm(vec_gps)
-            
-            t_rec.append(trans_rec)
-            t_gps.append(trans_gps)
-            break
+    for i in range(0, len(loc_rec)-hh, hh):
+        j = i+hh
+        vec_rec = loc_rec[j] - loc_rec[i]
+        vec_gps = loc_gps[index[j]] - loc_gps[index[i]]
+
+        trans_rec = np.linalg.norm(vec_rec)
+        trans_gps = np.linalg.norm(vec_gps)
+
+        t_rec.append(trans_rec)
+        t_gps.append(trans_gps)
+
         
-    for i in range(len(t_rec)-2):
-        rate_rec = t_rec[i]/(t_rec[i]+t_rec[i+1]+t_rec[i+2]) + 1e-5
-        rate_gps = t_gps[i]/((t_gps[i]+t_gps[i+1]+t_gps[i+2])+1e-5)  + 1e-5
+    for i in range(len(t_rec)-1):
+        rate_rec = t_rec[i]/(t_rec[i+1] + 1e-5) + 1e-5
+        rate_gps = t_gps[i]/(t_gps[i+1] + 1e-5) + 1e-5
         if np.isnan(np.abs(rate_rec-rate_gps)/rate_gps):
             print(rate_rec, 'rec')
             print(rate_gps, 'gps')
@@ -375,34 +379,41 @@ def evaluation_rel(loc_1, loc_2, image_list_file):
 
 def parse_dso(path_to_dso):
     pos_list = []
+    index = []
     with open(path_to_dso) as f:
         content = f.readlines()
+        if len(content)==0 or content[0].strip() == "error" or content[0].strip() == "":
+            return None, None
+
         for item in content:
-            if item.strip() == "error":
-                return None
             i_list = item.split()
             pos = i_list[1:4]
             pos = np.array(pos, dtype=np.float32)
             #print(pos)
             pos_list.append(pos)
+            index.append(int(float(i_list[0]) * 30))
     
-    return pos_list
+    return pos_list, index
 
 def parse_orb(path_to_orb):
     pos_list = []
+    index=[]
     with open(path_to_orb) as f:
         content = f.readlines()
+        if len(content)==0 or content[0].strip() == "error" or content[0].strip() == "":
+            return None, None
+
         for item in content:
-            if item.strip() == "error":
-                return None
             i_list = item.split()
             pos = i_list[1:4]
             pos = np.array(pos, dtype=np.float32)
             pos_list.append(pos)
+            index.append(int(float(i_list[0]) * 30))
+
     pln = fit_plane(pos_list)
     R_proj = compute_R(pln,np.array([0,0,1]))
     T_ = R_proj.dot(np.array(pos_list).T)
-    return T_.T
+    return T_.T, index
 
 def ground_truth(path_to_gps, path_to_video):
     content = get_gps(path_to_gps, path_to_video)
@@ -419,48 +430,79 @@ thresh_2 = 1.0
 thresh_3 = 1.0
 
 # return whether this example succeed
-def eval_one(folder, P):
+def eval_one(folder, P, index):
     # folder is a single path to a folder
     path_to_gps = os.path.join(folder, 'ride.json')
     videos = [each for each in os.listdir(folder) if each.endswith('.mov')]
     path_to_video = videos[0]
     loc = ground_truth(path_to_gps, path_to_video)
 
-    angle, a1, a2, e = evaluation_rel(loc.T, P, image_list_file=os.path.join(folder,'image_list.txt'))
-    print(angle)
+    angle, a1, a2, e = evaluation_rel(loc.T, P, index)
+    if isinstance(angle, str):
+        return angle
 
     v1 = np.sum(angle)
-    v2 = np.sum(np.abs(angle))
-    v3 = np.sum(np.abs(e))
-    print("angle total ", v1, ", angle abs ", v2, ", trans ", v3)
+    v2 = np.mean(np.abs(angle))
+    v3 = np.mean(np.abs(e))
+    #print("angle total ", v1, ", angle abs ", v2, ", trans ", v3)
+    return v1, v2, v3
+
+    '''
     if v1 >= thresh_1 or v2 >= thresh_2 or v3 > thresh_3:
         return False
     else:
         return True
+    '''
+
+def eval_api(program, folder, masked):
+    mask_str = "_mask" if masked.lower() == "true" else ""
+
+    if program == "dso":
+        P, index = parse_dso(folder + "/" + "dso" + mask_str + ".txt")
+    elif program == "orb":
+        P, index = parse_orb(folder + "/" + "orb" + mask_str + ".txt")
+    elif program == "opensfm":
+        folder = folder.rstrip("/")
+        if mask_str == "":
+            folder2 = folder + "_nomask"
+            # link the video if it has not been here
+            head, tail = os.path.split(folder)
+
+            for file0 in [tail + ".mov", "ride.json"]:
+                if not os.path.islink(os.path.join(folder2, file0)):
+                    os.symlink(os.path.join(os.path.abspath(folder), file0),
+                               os.path.join(os.path.abspath(folder2), file0))
+
+            folder = folder2
+
+        target = folder + "/reconstruction.meshed.json"
+        if not os.path.isfile(target):
+            return "not_generated"
+        R, T, Name = camera_motion(target, np.zeros((1, 2000)))
+        P = camera_pose(R, T)
+
+        index=[]
+        image_list_file = os.path.join(folder, 'image_list.txt')
+        with open(image_list_file) as f:
+            content = f.readlines()
+            for item in content:
+                imname = item.split('/')[1]
+                imnum = imname.split('.')[0]
+                index.append(int(imnum) - 1)
+
+    if P is None:
+        return "pose_not_available"
+    else:
+        return eval_one(folder, P, index)
 
 if __name__ == '__main__':
     program = sys.argv[1]
     folder = sys.argv[2]
     masked = sys.argv[3]
-    mask_str = "_mask" if masked.lower() == "true" else ""
 
-    if program == "dso":
-        P = parse_dso(folder + "/" + "dso" + mask_str + ".txt")
-    elif program == "orb":
-        P = parse_orb(folder + "/" + "orb" + mask_str + ".txt")
-    elif program == "opensfm":
-        folder = folder.rstrip("/")
-        if mask_str == "":
-            folder += "_nomask"
+    # call the api
+    print(eval_api(program, folder, masked))
 
-        R, T, Name = camera_motion(folder+"/reconstruction.json", np.zeros(1, 2000))
-        P = camera_pose(R, T)
-
-    if P is None:
-        succeed = False
-    else:
-        succeed = eval_one(folder, P)
-    print(succeed)
 
 
 

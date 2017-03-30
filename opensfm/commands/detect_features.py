@@ -27,7 +27,9 @@ class Command:
         processes = data.config.get('processes', 1)
         if processes == 1:
             for arg in arguments:
+                t0=time.time()
                 detect(arg)
+                print("total detect time in %f second" % (time.time()-t0))
         else:
             p = Pool(processes)
             p.map(detect, arguments)
@@ -35,11 +37,11 @@ class Command:
         with open(data.profile_log(), 'a') as fout:
             fout.write('detect_features: {0}\n'.format(end - start))
 
-
 def detect(args):
     image, data = args
     logger.info('Extracting {} features for image {}'.format(
         data.feature_type().upper(), image))
+
 
     if not data.features_exist(image):
         mask = data.mask_as_array(image)
@@ -49,14 +51,19 @@ def detect(args):
         else:
             print("Not found mask for the image")
         preemptive_max = data.config.get('preemptive_max', 200)
-        #[p_unsorted, f_unsorted, c_unsorted, p_nomask, f_nomask, c_nomask]  = 
-        all_content = features.extract_features(data.image_as_array(image), data.config, mask)
-        print(len(all_content), 'length of saving contents')
-        p_unsorted, f_unsorted, c_unsorted = all_content[0]
-        p_nomask, f_nomask, c_nomask = all_content[1]
+        the_image = data.image_as_array(image)
+
+
+        save_no_mask = False
+        all_content = features.extract_features(the_image, data.config, mask, save_no_mask)
+        if save_no_mask:
+            p_unsorted, f_unsorted, c_unsorted = all_content[0]
+            p_nomask, f_nomask, c_nomask = all_content[1]
+        else:
+            p_unsorted, f_unsorted, c_unsorted = all_content
+
         if len(p_unsorted) == 0:
             return
-
 
         '''
         size_nomask = p_nomask[:, 2]
@@ -80,7 +87,7 @@ def detect(args):
         p_pre = p_sorted[-preemptive_max:]
         f_pre = f_sorted[-preemptive_max:]
         data.save_features(image, p_sorted, f_sorted, c_sorted)
-        data.save_preemptive_features(image, p_pre, f_pre)
+        #data.save_preemptive_features(image, p_pre, f_pre)
 
         if data.config.get('matcher_type', "BRUTEFORCE") == "FLANN":
             index = features.build_flann_index(f_sorted, data.config)

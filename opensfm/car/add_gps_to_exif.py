@@ -1,6 +1,6 @@
 import sys, os
 from opensfm.car import parse_ride_json
-from opensfm import dataset
+#from opensfm import dataset
 from opensfm.pexif import JpegFile
 
 if __name__ == "__main__":

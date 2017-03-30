@@ -1,13 +1,13 @@
-# -*- coding: utf-8 -*-
+
 
 import os, sys
 import tempfile
 import time
 import logging
-from subprocess import call
+#from subprocess import call
 import numpy as np
 import json
-import uuid
+#import uuid
 import cv2
 import csfm
 import copy
@@ -69,11 +69,15 @@ def denormalized_image_coordinates(norm_coords, width, height):
     p[:, 1] = norm_coords[:, 1] * size - 0.5 + height / 2.0
     return p
 
-
 def mask_and_normalize_features(points, desc, colors, width, height, mask=None):
     """Remove features outside the mask and normalize image coordinates."""
     if mask is not None:
-        ids = np.array([_in_mask(point, width, height, mask) for point in points])
+        mask_coord_u = mask.shape[1]* (points[:, 0]+0.5) / width
+        mask_coord_v = mask.shape[0] * (points[:, 1] + 0.5) / height
+        values = mask[mask_coord_v.astype(np.int), mask_coord_u.astype(np.int)]
+        ids = np.not_equal(values, np.zeros(len(mask_coord_u)))
+        #ids = np.array([_in_mask(point, width, height, mask) for point in points])
+
         points = points[ids]
         desc = desc[ids]
         colors = colors[ids]
@@ -201,6 +205,39 @@ def extract_features_surf(image, config):
     points = np.array([(i.pt[0], i.pt[1], i.size, i.angle) for i in points])
     return points, desc
 
+def extract_features_orb(image, config):
+    time0 = time.time()
+
+    feature_min_frames = config.get('feature_min_frames', 0)
+    orb_scaleFactor = config.get('orb_scaleFactor', 1.2)
+    orb_nlevels = config.get('orb_nlevels', 8)
+    orb_fastThreshold = config.get('orb_fastThreshold', 20)
+
+    if context.OPENCV3:
+        detector = cv2.ORB_create(nfeatures=feature_min_frames,
+                           scaleFactor=orb_scaleFactor,
+                           nlevels=orb_nlevels,
+                           fastThreshold=orb_fastThreshold)
+        descriptor = detector
+    else:
+        detector = cv2.FeatureDetector_create('ORB')
+        descriptor = cv2.DescriptorExtractor_create('ORB')
+        detector.setInt('nfeatures', feature_min_frames)
+        detector.setDouble('scaleFactor', orb_scaleFactor)
+        detector.setInt('nlevels', orb_nlevels)
+        detector.setInt('fastThreshold', orb_fastThreshold)
+
+    points = detector.detect(image)
+    points, desc = descriptor.compute(image, points)
+    #points, desc = descriptor.detectAndCompute(image, None)
+
+    points = np.array([(i.pt[0], i.pt[1], i.size, i.angle) for i in points])
+
+    logger.debug('Found {0} points in {1}s'.format(len(points), time.time() - time0))
+
+    return points, desc
+
+
 def akaze_descriptor_type(name):
     d = csfm.AkazeDescriptorType.__dict__
     if name in d:
@@ -256,7 +293,7 @@ def extract_features_hahog(image, config):
     logger.debug('Found {0} points in {1}s'.format( len(points), time.time()-t ))
     return points, desc
 
-def extract_features(color_image, config, mask=None):
+def extract_features(color_image, config, mask=None, save_no_mask=False):
     assert len(color_image.shape) == 3
     color_image = resized_image(color_image, config)
     image = cv2.cvtColor(color_image, cv2.COLOR_RGB2GRAY)
@@ -270,6 +307,8 @@ def extract_features(color_image, config, mask=None):
         points, desc = extract_features_akaze(image, config)
     elif feature_type == 'HAHOG':
         points, desc = extract_features_hahog(image, config)
+    elif feature_type == "ORB":
+        points, desc = extract_features_orb(image, config)
     else:
         raise ValueError('Unknown feature type (must be SURF, SIFT, AKAZE or HAHOG)')
 
@@ -282,8 +321,11 @@ def extract_features(color_image, config, mask=None):
 
     # remove the key points that is not in the mask, and
     # transform coordinate such that x' = (x-width/2) / max(width, height), i.e. centering
-    return [mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask),
-            mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], None)]
+    if save_no_mask:
+        return [mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask),
+                mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], None)]
+    else:
+        return mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask)
 
 
 def build_flann_index(features, config):
@@ -297,12 +339,15 @@ def build_flann_index(features, config):
 
     if features.dtype.type is np.float32:
         FLANN_INDEX_METHOD = FLANN_INDEX_KMEANS
+        flann_params = dict(algorithm=FLANN_INDEX_METHOD,
+                            branching=config.get('flann_branching', 16),
+                            iterations=config.get('flann_iterations', 20))
     else:
         FLANN_INDEX_METHOD = FLANN_INDEX_LSH
-
-    flann_params = dict(algorithm=FLANN_INDEX_METHOD,
-                        branching=config.get('flann_branching', 16),
-                        iterations=config.get('flann_iterations', 20))
+        flann_params = dict(algorithm=FLANN_INDEX_METHOD,
+                            table_number=config.get('flann_table_number', 6),  # 12
+                            key_size=config.get('flann_key_size', 12),  # 20
+                            multi_probe_level=config.get('flann_multiple_prob_level', 1))  #2)
 
     flann_Index = cv2.flann.Index if context.OPENCV3 else cv2.flann_Index
     return flann_Index(features, flann_params)

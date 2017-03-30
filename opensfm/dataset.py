@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 
 import os
 import json
@@ -273,18 +272,25 @@ class DataSet:
         """
         return os.path.join(self.__feature_path(), image + '.' + self.feature_type() + '.npz')
 
-    def __save_features(self, filepath, image, points, descriptors, colors=None):
+    def __save_features(self, filepath, image, points, descriptors, colors=None, uncompressed=False):
         io.mkdir_p(self.__feature_path())
         feature_type = self.config.get('feature_type')
         if ((feature_type == 'AKAZE' and self.config.get('akaze_descriptor') in ['MLDB_UPRIGHT', 'MLDB']) or
-            (feature_type == 'HAHOG' and self.config.get('hahog_normalize_to_uchar', False))):
+            (feature_type == 'HAHOG' and self.config.get('hahog_normalize_to_uchar', False)) or
+            (feature_type == "ORB") ):
             feature_data_type = np.uint8
         else:
             feature_data_type = np.float32
-        np.savez_compressed(filepath,
-                 points=points.astype(np.float32),
-                 descriptors=descriptors.astype(feature_data_type),
-                 colors=colors)
+
+        if uncompressed:
+            func = np.savez
+        else:
+            func = np.savez_compressed
+
+        func(filepath,
+             points=points.astype(np.float32),
+             descriptors=descriptors.astype(feature_data_type),
+             colors=colors)
 
     def features_exist(self, image):
         return os.path.isfile(self.__feature_file(image))

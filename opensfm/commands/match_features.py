@@ -1,7 +1,7 @@
 import logging
 from multiprocessing import Pool
 import time
-import os
+#import os
 
 import numpy as np
 
@@ -206,6 +206,7 @@ def match(args):
         # symmetric matching
         t = time.time()
         p1, f1, c1 = ctx.data.load_features(im1)
+        # if we are using bruteforce matching, the loaded index will simplily be False.
         i1 = ctx.data.load_feature_index(im1, f1)
 
         p2, f2, c2 = ctx.data.load_features(im2)

@@ -1,10 +1,10 @@
 import numpy as np
 import cv2
-import pyopengv
 import networkx as nx
 import logging
 from collections import defaultdict
 from itertools import combinations
+import pyopengv
 
 from opensfm import context
 from opensfm.unionfind import UnionFind
@@ -16,13 +16,14 @@ logger = logging.getLogger(__name__)
 # pairwise matches
 def match_lowe(index, f2, config):
     search_params = dict(checks=config.get('flann_checks', 200))
+    # TODO: the saved FLANN index for LSH doesn't work, it will crash here
     results, dists = index.knnSearch(f2, 2, params=search_params)
     squared_ratio = config.get('lowes_ratio', 0.6)**2  # Flann returns squared L2 distances
     good = dists[:, 0] < squared_ratio * dists[:, 1]
     matches = zip(results[good, 0], good.nonzero()[0])
     return np.array(matches, dtype=int)
 
-
+@profile
 def match_symmetric(fi, indexi, fj, indexj, config):
     if config.get('matcher_type', 'FLANN') == 'FLANN':
         matches_ij = [(a,b) for a,b in match_lowe(indexi, fj, config)]
@@ -46,7 +47,6 @@ def convert_matches_to_vector(matches):
         k = k+1
     return matches_vector
 
-
 def match_lowe_bf(f1, f2, config):
     '''Bruteforce feature matching
     '''
@@ -67,7 +67,6 @@ def match_lowe_bf(f1, f2, config):
                 good_matches.append(m)
     good_matches = convert_matches_to_vector(good_matches)
     return np.array(good_matches, dtype=int)
-
 
 def robust_match_fundamental(p1, p2, matches, config):
     '''Computes robust matches by estimating the Fundamental matrix via RANSAC.

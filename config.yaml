@@ -37,7 +37,7 @@ orb_fastThreshold: 20
 # Params for general matching
 lowes_ratio: 0.8              # Ratio test for matches
 preemptive_lowes_ratio: 0.6   # Ratio test for preemptive matches
-matcher_type: FLANN      # Yang: FLANN or BRUTEFORCE
+matcher_type: BRUTEFORCE      # Yang: FLANN or BRUTEFORCE
 
 # Params for FLANN matching
 flann_branching: 16           # See OpenCV doc
@@ -97,7 +97,7 @@ radial_distorsion_k2_sd: 0.01   # The standard deviation of the second radial di
 bundle_interval: 4              # Yang: bundle adjustment after adding 'bundle_interval' cameras
 bundle_new_points_ratio: 1.2    # bundle when (new points) / (bundled points) > bundle_new_points_ratio
 bundle_outlier_threshold: 0.006 # After bundling, if the returned reprojection error of a 3D point is too large, remove it
-bundle_local_neighbour: 10      # Yang: if > 0, then use the local bundler with specified neighbours
+bundle_local_neighbour: 4      # Yang: if > 0, then use the local bundler with specified neighbours
 bundle_use_gps: no                    # Yang: Enforce GPS position in bundle adjustment
 bundle_use_gcp: no                    # Enforce Ground Control Point position in bundle adjustment
 # TODO done

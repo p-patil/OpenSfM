@@ -18,14 +18,14 @@ def test_pair(im1, im2, mydataset, config_std, config_custom):
     p2, f2, c2 = data.load_features(im2)
 
     print("running ground truth")
-    res_gt = ground_truth(f1, f2)
+    res_gt = ground_truth(f1, f2,  cv2.NORM_L2 if f1.dtype.type is np.float32 else cv2.NORM_HAMMING)
     print(res_gt.shape)
     print("done")
 
     res1 = run_once(config_std, "using standard timing %f", f1, f2)
-    print("equal ratio of standard is %f" % accuracy(res1, res_gt))
+    print("equal ratio of standard is %f, accuracy1 %f" % accuracy(res1, res_gt))
     res2 = run_once(config_custom, "using custom timing %f", f1, f2)
-    print("equal ratio of custom   is %f" % accuracy(res2, res_gt))
+    print("equal ratio of custom   is %f, accuracy1 %f" % accuracy(res2, res_gt))
     print(res1.shape)
 
 
@@ -33,6 +33,7 @@ def test_pair(im1, im2, mydataset, config_std, config_custom):
 
 
 def run_once(config, message, f1, f2):
+    print(config)
     # check search f2 in f1
     index = build_flann_index(f1, config)
     start = time.time()
@@ -58,6 +59,7 @@ def build_flann_index(features, config):
     else:
         FLANN_INDEX_METHOD = FLANN_INDEX_LSH
 
+    '''
     flann_params = dict(algorithm=FLANN_INDEX_METHOD,
                         target_precision=0.9,
                         build_weight=0.01,
@@ -84,13 +86,19 @@ def build_flann_index(features, config):
                         leaf_size=50)
 
     flann_params = dict(algorithm=FLANN_INDEX_AUTOTUNED)
+    '''
+    flann_params = config
+    flann_params['algorithm'] = FLANN_INDEX_METHOD
 
-    OPENCV_3 = False
+    #flann_params = dict(algorithm=FLANN_INDEX_AUTOTUNED,
+    #                    dist = cv2.NORM_HAMMING)
+
+    OPENCV_3 = True
     flann_Index = cv2.flann.Index if OPENCV_3 else cv2.flann_Index
     return flann_Index(features, flann_params)
 
-def ground_truth(f1, f2):
-    bf = cv2.BFMatcher()
+def ground_truth(f1, f2, distance=cv2.NORM_L2):
+    bf = cv2.BFMatcher(distance)
 
     start = time.time()
     matches = bf.knnMatch(f2, f1, k=2)
@@ -103,16 +111,18 @@ def ground_truth(f1, f2):
 
 
 def accuracy(m, gt):
-    ind = (m == gt)
-    ind = np.logical_and(ind[:, 0], ind[:, 1])
+    ind0 = (m == gt)
+    ind = np.logical_and(ind0[:, 0], ind0[:, 1])
     equal_ratio = sum(ind) * 1.0 / ind.size
+    equal_ratio1 = sum(ind0[:, 0]) * 1.0 / ind0.shape[0]
 
-    return equal_ratio
+    return equal_ratio, equal_ratio1
 
 if __name__ == "__main__":
-    mydataset = "data/33bfbd1a-480d-49b6-803b-d2f1f8b56331"
-    im1 = "1000.jpg"
-    im2 = "1007.jpg"
+    mydataset = "data_sync/121f"
+    im1 = "0128.jpg"
+    im2 = "0129.jpg"
+    '''
     config_std = {'flann_checks': 200,
                   'flann_iterations': 10,
                   'flann_branching': 16}
@@ -120,5 +130,14 @@ if __name__ == "__main__":
     config_custom =  {'flann_checks': 50,
                       'flann_iterations': 10,
                       'flann_branching': 32}
+    '''
+    config_std = dict(flann_checks= 0,
+                        table_number=15,  # 12
+                        key_size=20,  # 20
+                        multi_probe_level=1)  # 2)
+    config_custom = dict(flann_checks= 50,
+                        table_number=12,
+                      key_size=20,
+                      multi_probe_level=2)
 
     test_pair(im1, im2, mydataset, config_std, config_custom)

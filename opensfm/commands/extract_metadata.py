@@ -1,6 +1,7 @@
 import copy
 import logging
 import time
+from PIL import Image
 
 from opensfm import dataset
 from opensfm import exif
@@ -17,6 +18,7 @@ class Command:
     def add_arguments(self, parser):
         parser.add_argument('dataset', help='dataset to process')
 
+    @profile
     def run(self, args):
         start = time.time()
         data = dataset.DataSet(args.dataset)
@@ -30,7 +32,9 @@ class Command:
 
             # Image Height and Image Width
             if d['width'] <= 0 or not data.config['use_exif_size']:
-                d['height'], d['width'] = data.image_as_array(image).shape[:2]
+                #d['height'], d['width'] = data.image_as_array(image).shape[:2]
+                with  Image.open(data.image_files[image]) as im:
+                    d['width'], d['height']= im.size
 
             data.save_exif(image, d)
 

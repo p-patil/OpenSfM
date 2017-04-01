@@ -84,10 +84,11 @@ def detect(args):
         p_sorted = p_unsorted[order, :]
         f_sorted = f_unsorted[order, :]
         c_sorted = c_unsorted[order, :]
-        p_pre = p_sorted[-preemptive_max:]
-        f_pre = f_sorted[-preemptive_max:]
         data.save_features(image, p_sorted, f_sorted, c_sorted)
-        #data.save_preemptive_features(image, p_pre, f_pre)
+        if data.config.get('preemptive_threshold', 0) > 0:
+            p_pre = p_sorted[-preemptive_max:]
+            f_pre = f_sorted[-preemptive_max:]
+            data.save_preemptive_features(image, p_pre, f_pre)
 
         if data.config.get('matcher_type', "BRUTEFORCE") == "FLANN":
             index = features.build_flann_index(f_sorted, data.config)

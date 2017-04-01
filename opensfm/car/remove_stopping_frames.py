@@ -19,7 +19,7 @@ def homography_inlier_ratio(p1, p2, matches, args):
 
     return inliers_ratio
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('dataset', help='dataset to process')
     parser.add_argument('--homography_ransac_threshold',
@@ -70,7 +70,7 @@ if __name__ == "__main__":
                     i2 = data.load_feature_index(im2, f2)
 
                     matches = matching.match_symmetric(f1, i1, f2, i2, config)
-
+                    
                     if len(matches) < robust_matching_min_match:
                         # this image doesn't have enough matches with the first one
                         # i.e. either of them is broken, to be safe throw away both
@@ -169,3 +169,6 @@ if __name__ == "__main__":
     with open(image_list, "w") as f:
         for im in retained:
             f.write("images/"+im+"\n")
+
+if __name__ == "__main__":
+    main()

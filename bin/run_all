@@ -3,6 +3,9 @@
 echo $1
 echo $2
 
+PROFILE="kernprof -l -v"
+#PROFILE=""
+
 set -e
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
@@ -39,20 +42,20 @@ python opensfm/car/generate_mask.py $1 \
         --gpu=$2
 
 # TODO debug
-#$DIR/opensfm extract_metadata $1
-$DIR/opensfm detect_features $1
+$PROFILE $DIR/opensfm extract_metadata $1
+$PROFILE $DIR/opensfm detect_features $1
 
 # same frame detection & removal
 # TODO: determine good value for inlier ratio
-python opensfm/car/remove_stopping_frames.py $1 \
+$PROFILE opensfm/car/remove_stopping_frames.py $1 \
         --homography_ransac_threshold=0.004 \
         --homography_inlier_ratio=0.85 \
         --matching_mod="good"
 
-$DIR/opensfm match_features $1
-$DIR/opensfm create_tracks $1
-$DIR/opensfm reconstruct $1
-$DIR/opensfm mesh $1
+$PROFILE $DIR/opensfm match_features $1
+$PROFILE $DIR/opensfm create_tracks $1
+$PROFILE $DIR/opensfm reconstruct $1
+$PROFILE $DIR/opensfm mesh $1
 
 # the unused scripts in car
 # match_homography.py

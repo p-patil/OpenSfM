@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from opensfm import dataset
 import os
 import argparse
@@ -70,7 +72,7 @@ def main():
                     i2 = data.load_feature_index(im2, f2)
 
                     matches = matching.match_symmetric(f1, i1, f2, i2, config)
-                    
+
                     if len(matches) < robust_matching_min_match:
                         # this image doesn't have enough matches with the first one
                         # i.e. either of them is broken, to be safe throw away both

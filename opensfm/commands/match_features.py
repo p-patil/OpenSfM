@@ -165,7 +165,6 @@ def match_arguments(pairs, ctx):
     for i, (im, candidates) in enumerate(pairs.items()):
         yield im, candidates, i, len(pairs), ctx
 
-
 def match(args):
     '''
     Compute all matches for a single image

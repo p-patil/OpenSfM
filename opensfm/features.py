@@ -222,10 +222,11 @@ def extract_features_orb(image, config):
     else:
         detector = cv2.FeatureDetector_create('ORB')
         descriptor = cv2.DescriptorExtractor_create('ORB')
-        detector.setInt('nfeatures', feature_min_frames)
+        detector.setInt('nFeatures', feature_min_frames)
         detector.setDouble('scaleFactor', orb_scaleFactor)
-        detector.setInt('nlevels', orb_nlevels)
-        detector.setInt('fastThreshold', orb_fastThreshold)
+        detector.setInt('nLevels', orb_nlevels)
+        # TODO: fastthreshold not working
+        #detector.setInt('fastThreshold', orb_fastThreshold)
 
     points = detector.detect(image)
     points, desc = descriptor.compute(image, points)

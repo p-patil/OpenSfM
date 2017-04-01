@@ -5,6 +5,7 @@ import logging
 from collections import defaultdict
 from itertools import combinations
 import pyopengv
+import time
 
 from opensfm import context
 from opensfm.unionfind import UnionFind
@@ -23,16 +24,24 @@ def match_lowe(index, f2, config):
     matches = zip(results[good, 0], good.nonzero()[0])
     return np.array(matches, dtype=int)
 
-@profile
 def match_symmetric(fi, indexi, fj, indexj, config):
+    t = time.time()
     if config.get('matcher_type', 'FLANN') == 'FLANN':
         matches_ij = [(a,b) for a,b in match_lowe(indexi, fj, config)]
         matches_ji = [(b,a) for a,b in match_lowe(indexj, fi, config)]
     else:
         matches_ij = [(a,b) for a,b in match_lowe_bf(fi, fj, config)]
+
+        match1 = np.array(matches_ij)
+        fj_new2old = match1[:, 1]
+        fj=fj[fj_new2old,:]
+
         matches_ji = [(b,a) for a,b in match_lowe_bf(fj, fi, config)]
 
+        matches_ji = [(a,fj_new2old[b]) for a,b in matches_ji]
+
     matches = set(matches_ij).intersection(set(matches_ji))
+    print("matching time ", time.time()-t, " seconds")
     return np.array(list(matches), dtype=int)
 
 
@@ -56,6 +65,7 @@ def match_lowe_bf(f1, f2, config):
     else:
         matcher_type = 'BruteForce'
     matcher = cv2.DescriptorMatcher_create(matcher_type)
+    # f1=querys f2=train
     matches = matcher.knnMatch(f1, f2, k=2)
 
     ratio = config.get('lowes_ratio', 0.6)

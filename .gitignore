@@ -15,6 +15,7 @@ opensfm/car/segment/
 /bin/plot_featuresc
 *ipynb_checkpoints*
 *nfs*
+*.lprof
 
 # Ignore the data folder, but not the berlin example.
 data_sync/

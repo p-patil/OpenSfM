@@ -12,10 +12,11 @@ if __name__ == "__main__":
 
         if dataset_path[-1] == "/":
             dataset_path = dataset_path[:-1]
-        # purge the _xxx component
-        dataset_path = dataset_path.split("_")[0]
 
         head, tail = os.path.split(dataset_path)
+
+        # purge the _xxx component
+        tail = tail.split("_")[0]
 
         gps_res = parse_ride_json.get_gps(json_path, tail + ".mov")
         gps_interp = parse_ride_json.get_interp_lat_lon(gps_res, 30)

@@ -3,8 +3,8 @@
 echo $1
 echo $2
 
-PROFILE="kernprof -l -v"
-#PROFILE=""
+#PROFILE="kernprof -l -v "
+PROFILE=""
 
 set -e
 

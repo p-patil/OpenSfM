@@ -6,6 +6,8 @@ import subprocess
 import numpy as np
 #import matplotlib.pyplot as pl
 import cv2
+import sys
+sys.path.append("/home/abobu/OpenSfM/")
 
 def convert_mask(value):
     # city scape features here
@@ -111,7 +113,7 @@ parser.add_argument("--hood_height",
                     help="how many pixels to remove for hood",
                     required=False)
 parser.add_argument("--seg_relative_path",
-                    default="output/results/joint",
+                    default="output/results/frontend_vgg",
                     help="the path of segmentations relative to images",
                     required=False)
 parser.add_argument("--gpu",
@@ -122,6 +124,7 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     base = args.dataset
+    args.seg_relative_path="output/results/frontend_vgg"
     path_images = os.path.join(base, "images")
     path_seg = os.path.join(path_images, args.seg_relative_path)
     path_mask = os.path.join(base, "masks")

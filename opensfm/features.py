@@ -1,4 +1,4 @@
-
+from PIL import Image
 
 import os, sys
 import tempfile
@@ -13,7 +13,7 @@ import csfm
 import copy
 
 from opensfm import context
-
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def denormalized_image_coordinates(norm_coords, width, height):
     p[:, 1] = norm_coords[:, 1] * size - 0.5 + height / 2.0
     return p
 
-def mask_and_normalize_features(points, desc, colors, width, height, mask=None):
+def mask_and_normalize_features(points, desc, colors, width, height, mask=None, seg=None):
     """Remove features outside the mask and normalize image coordinates."""
     if mask is not None:
         mask_coord_u = mask.shape[1]* (points[:, 0]+0.5) / width
@@ -77,15 +77,34 @@ def mask_and_normalize_features(points, desc, colors, width, height, mask=None):
         values = mask[mask_coord_v.astype(np.int), mask_coord_u.astype(np.int)]
         ids = np.not_equal(values, np.zeros(len(mask_coord_u)))
         #ids = np.array([_in_mask(point, width, height, mask) for point in points])
-
+        
+        seg = seg[mask_coord_v.astype(np.int), mask_coord_u.astype(np.int)]
+        seg = seg[ids]
         points = points[ids]
         desc = desc[ids]
         colors = colors[ids]
-
+    
+        # Transform the colors into segmentation colors
+        colors = segmentation_color(seg)
     points = copy.deepcopy(points)
     points[:, :2] = normalized_image_coordinates(points[:, :2], width, height)
     return points, desc, colors
 
+def segmentation_color(pred):
+    color = {0:[128, 64, 128], 1:[244, 35,232], 2:[ 70, 70, 70],
+             3:[102, 102,156], 4:[190,153,153], 5:[153,153,153],
+             6:[250, 170, 30], 7:[220,220,  0], 8:[107,142, 35],
+             9:[152,251, 152], 10:[70,130,180], 11:[220, 20,60],
+             12:[255,  0,  0], 13:[0, 0,  142], 14:[0,  0,  70],
+             15:[0, 60,  100], 16:[0, 80, 100], 17:[0,  0, 230],
+             18:[119, 11, 32]
+             }
+    color = defaultdict(lambda: [0,0,0], color)
+    shape = pred.shape
+    pred = pred.ravel()
+    pred = np.asarray([color[i] for i in pred])
+    pred = pred.reshape(shape[0],3)
+    return pred.astype(np.uint8)
 
 def _in_mask(point, width, height, mask):
     """Check if a point is inside a binary mask."""
@@ -294,7 +313,8 @@ def extract_features_hahog(image, config):
     logger.debug('Found {0} points in {1}s'.format( len(points), time.time()-t ))
     return points, desc
 
-def extract_features(color_image, config, mask=None, save_no_mask=False):
+def extract_features(color_image, config, mask=None, save_no_mask=False,
+                     path_seg=None):
     assert len(color_image.shape) == 3
     color_image = resized_image(color_image, config)
     image = cv2.cvtColor(color_image, cv2.COLOR_RGB2GRAY)
@@ -319,15 +339,27 @@ def extract_features(color_image, config, mask=None, save_no_mask=False):
     xs = points[:,0].round().astype(int)
     ys = points[:,1].round().astype(int)
     colors = color_image[ys, xs]
+    
+    # Get segmentation for coloring
+    if path_seg:
+        im = Image.open(path_seg)  # Can be many different formats.
+        seg = np.array(im)
+    else:
+        seg = None
 
     # remove the key points that is not in the mask, and
     # transform coordinate such that x' = (x-width/2) / max(width, height), i.e. centering
     if save_no_mask:
-        return [mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask),
-                mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], None)]
+        return [mask_and_normalize_features(points, desc, colors,
+                                            image.shape[1], image.shape[0],
+                                            mask, seg),
+                mask_and_normalize_features(points, desc, colors,
+                                            image.shape[1], image.shape[0],
+                                            None, None)]
     else:
-        return mask_and_normalize_features(points, desc, colors, image.shape[1], image.shape[0], mask)
-
+        return mask_and_normalize_features(points, desc, colors,
+                                           image.shape[1], image.shape[0],
+                                           mask, seg)
 
 def build_flann_index(features, config):
     FLANN_INDEX_LINEAR          = 0

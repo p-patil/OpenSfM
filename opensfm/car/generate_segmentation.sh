@@ -2,9 +2,8 @@
 
 # Dilation lib path on durian9
 #DILATION_BIN="/home/hxu/Reconstruction/bundler_sfm/data/dilation"
-
 # Dilation on Kraken
-DILATION_BIN="/home/hxu/dilation"
+DILATION_BIN="/home/abobu/dilation"
 
 PRETRAINED_MODEL=${DILATION_BIN}"/pretrained/dilation10_cityscapes.caffemodel"
 
@@ -18,7 +17,7 @@ GPU=$3
 while true;
 do
     MEM=$(nvidia-smi -i $GPU | grep MiB.*Default | sed -r  's/.*W[^0-9]*([0-9]+).*/\1/')
-    if [ "$MEM" -lt "1000" ]; then
+    if [ "$MEM" -lt "16000" ]; then
         echo "Memory sufficient and breaking at"$MEM
         break
     else
@@ -30,7 +29,7 @@ done
 # generate the image list
 ls  -d -1 ${IMAGES_DIR}/{*,.*}  | grep -i 'PNG\|JPG\|JPEG' > ${IMAGES_DIR}/images.txt
 
-python ${DILATION_BIN}/test.py joint \
+python ${DILATION_BIN}/test.py frontend \
 --work_dir ${IMAGES_DIR}/output \
 --image_list ${IMAGES_DIR}/images.txt \
 --weights  ${PRETRAINED_MODEL} \

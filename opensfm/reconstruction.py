@@ -19,6 +19,10 @@ from opensfm import multiview
 from opensfm import types
 from itertools import combinations
 import bisect
+from sklearn import linear_model
+from sklearn.decomposition import PCA
+import os
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -980,6 +984,24 @@ def incremental_reconstruction(data):
                 reconstructions = sorted(reconstructions,
                                          key=lambda x: -len(x.shots))
                 data.save_reconstruction(reconstructions)
+
+                # Gather segmentation info about images
+
+                #path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im1)[0]+'.png'    
+                #im1_seg = Image.open(path_seg)
+                #im1_seg = np.array(im1_seg)
+
+                #path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im2)[0]+'.png'    
+                #im2_seg = Image.open(path_seg)
+                #im2_seg = np.array(im2_seg)
+
+                #idx_u1 = p1[:,0] + 0.5
+                #idx_v1 = p1[:,1] + 0.5
+                #im1_seg = im1_seg[idx_u1.astype(np.int),idx_v1.astype(np.int)]
+
+                #idx_u2 = p2[:,0] + 0.5
+                #idx_v2 = p2[:,1] + 0.5
+                #im2_seg = im2_seg[idx_u2.astype(np.int),idx_v2.astype(np.int)]
             else:
                 print("reconstruction for image %s and %s failed" % (im1, im2))
 
@@ -988,3 +1010,54 @@ def incremental_reconstruction(data):
             k, len(r.shots), len(r.points)))
     logger.info("{} partial reconstructions in total.".format(
         len(reconstructions)))
+
+def find_road_points(reconstruction):
+    for point in reconstruction.points.values():
+        return
+
+
+
+def local_regression_plane_ransac(points):
+    """
+    Computes parameters for a local regression plane using RANSAC
+    """
+    XY = []
+    Z = []
+    for point in points:
+        coords = point.coordinates
+        XY.append(coords[:2])
+        Z.append(coords[2])
+
+    ransac = linear_model.RANSACRegressor(
+                                        PCA(),
+                                        residual_threshold=0.1
+                                         )
+    ransac.fit(XY, Z)
+
+    inlier_mask = ransac.inlier_mask_
+    coeff = model_ransac.estimator_.coef_
+    intercept = model_ransac.estimator_.intercept_
+    return ransac
+
+def project_3Dpoints_onto_plane(ransac, points):
+    """
+    Given a ransac regressor for a plane and reconstruction points, project all
+    3D points onto the ransac plane
+    """
+    projected = []
+    for point in points:
+        coords = point.coordinates
+        XY = coords[:2]
+        Z = ransac.predict(XY)
+        projected.append([XY[0], XY[1], Z])
+    return np.asarray(projected)
+
+def fit_bounding_box_to_plane(points):
+    """
+    Given points on a plane, fit a bounding box to these points
+    """
+    xmin = np.amin(points, axis=0)
+    xmax = np.amax(points, axis=0)
+    ymin = np.amin(points, axis=1)
+    ymax = np.amax(points, axis=1)
+    return [xmin, xmax, ymin, ymax]

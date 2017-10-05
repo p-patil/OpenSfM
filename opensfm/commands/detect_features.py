@@ -1,9 +1,8 @@
 import logging
 from multiprocessing import Pool
 import time
-
 import numpy as np
-
+import os
 from opensfm import dataset
 from opensfm import features
 
@@ -41,21 +40,26 @@ def detect(args):
     image, data = args
     logger.info('Extracting {} features for image {}'.format(
         data.feature_type().upper(), image))
-
-
+    
     if not data.features_exist(image):
         mask = data.mask_as_array(image)
         if mask is not None:
             print("found mask for image:%s" % image)
             logger.info('Found mask to apply for image {}'.format(image))
+    
+            # Obtain segmentation path
+            path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(image)[0]+'.png'
+
         else:
             print("Not found mask for the image")
+            path_seg = None
         preemptive_max = data.config.get('preemptive_max', 200)
         the_image = data.image_as_array(image)
 
 
         save_no_mask = False
-        all_content = features.extract_features(the_image, data.config, mask, save_no_mask)
+        all_content = features.extract_features(the_image, data.config, mask,
+                                                save_no_mask, path_seg)
         if save_no_mask:
             p_unsorted, f_unsorted, c_unsorted = all_content[0]
             p_nomask, f_nomask, c_nomask = all_content[1]

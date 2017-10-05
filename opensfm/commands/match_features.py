@@ -1,10 +1,11 @@
 import logging
 from multiprocessing import Pool
 import time
-#import os
-
+import os
+from PIL import Image
 import numpy as np
 
+from pathlib2 import Path
 from opensfm import dataset
 from opensfm import geo
 from opensfm import matching
@@ -178,6 +179,22 @@ def match(args):
     lowes_ratio = config['lowes_ratio']
     preemptive_lowes_ratio = config['preemptive_lowes_ratio']
 
+    path_seg = ctx.data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im1)[0]+'.png'
+    file_name = Path(path_seg)
+    if file_name.is_file():
+        im1_seg = Image.open(path_seg)
+        im1_seg = np.array(im1_seg)
+    p1, f1, c1 = ctx.data.load_features(im1)
+    
+    # if we are using bruteforce matching, the loaded index will simplily be False.
+    i1 = ctx.data.load_feature_index(im1, f1)
+    if file_name.is_file():
+        idx_u1 = im1_seg.shape[1]*(p1[:,0] + 0.5)
+        idx_v1 = im1_seg.shape[0]*(p1[:,1] + 0.5)
+        im1_seg = im1_seg[idx_v1.astype(np.int),idx_u1.astype(np.int)]
+    else:
+        im1_seg = None
+
     if ctx.data.matches_exists(im1):
         im1_matches = ctx.data.load_matches(im1)
     else:
@@ -187,12 +204,28 @@ def match(args):
         if im2 in im1_matches:
             continue
 
+        path_seg = ctx.data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im2)[0]+'.png'
+        file_name = Path(path_seg)
+        if file_name.is_file():
+            im2_seg = Image.open(path_seg)
+            im2_seg = np.array(im2_seg)
+
+        p2, f2, c2 = ctx.data.load_features(im2)
+        i2 = ctx.data.load_feature_index(im2, f2)
+        
+        if file_name.is_file():
+            idx_u2 = im2_seg.shape[1]*(p2[:,0]+0.5)
+            idx_v2 = im2_seg.shape[0]*(p2[:,1]+0.5)
+            im2_seg = im2_seg[idx_v2.astype(np.int),idx_u2.astype(np.int)]
+        else:
+            im2_seg = None
+
         # preemptive matching
         if preemptive_threshold > 0:
             t = time.time()
             config['lowes_ratio'] = preemptive_lowes_ratio
             matches_pre = matching.match_lowe_bf(
-                ctx.f_pre[im1], ctx.f_pre[im2], config)
+                ctx.f_pre[im1], ctx.f_pre[im2], config, im1_seg, im2_seg)
             config['lowes_ratio'] = lowes_ratio
             logger.debug("Preemptive matching {0}, time: {1}s".format(
                 len(matches_pre), time.time() - t))
@@ -204,14 +237,9 @@ def match(args):
 
         # symmetric matching
         t = time.time()
-        p1, f1, c1 = ctx.data.load_features(im1)
-        # if we are using bruteforce matching, the loaded index will simplily be False.
-        i1 = ctx.data.load_feature_index(im1, f1)
 
-        p2, f2, c2 = ctx.data.load_features(im2)
-        i2 = ctx.data.load_feature_index(im2, f2)
-
-        matches = matching.match_symmetric(f1, i1, f2, i2, config)
+        matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg,
+                                           im2_seg)
         logger.debug('{} - {} has {} candidate matches'.format(
             im1, im2, len(matches)))
         if len(matches) < robust_matching_min_match:

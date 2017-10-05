@@ -6,37 +6,47 @@ from collections import defaultdict
 from itertools import combinations
 import pyopengv
 import time
-
 from opensfm import context
 from opensfm.unionfind import UnionFind
 
-
 logger = logging.getLogger(__name__)
 
-
 # pairwise matches
-def match_lowe(index, f2, config):
+def match_lowe(index, f2, config, im1_seg=None, im2_seg=None):
     search_params = dict(checks=config.get('flann_checks', 200))
     # TODO: the saved FLANN index for LSH doesn't work, it will crash here
     results, dists = index.knnSearch(f2, 2, params=search_params)
-    squared_ratio = config.get('lowes_ratio', 0.6)**2  # Flann returns squared L2 distances
+    print("COMPUTING LOWE")
+    for i in range(len(f2)):
+        if im1_seg is not None:
+            if im1_seg[i] == 0:
+                squared_ratio = 0.01**2
+            else:
+                squared_ratio = config.get('lowes_ratio', 0.6)**2  # Flann returns squared L2 distances
+        else:
+            squared_ratio = config.get('lowes_ratio', 0.6)**2
     good = dists[:, 0] < squared_ratio * dists[:, 1]
     matches = zip(results[good, 0], good.nonzero()[0])
     return np.array(matches, dtype=int)
 
-def match_symmetric(fi, indexi, fj, indexj, config):
+def match_symmetric(fi, indexi, fj, indexj, config, im1_seg=None, im2_seg=None):
     t = time.time()
+    print("Symmetric matching commencing")
     if config.get('matcher_type', 'FLANN') == 'FLANN':
-        matches_ij = [(a,b) for a,b in match_lowe(indexi, fj, config)]
-        matches_ji = [(b,a) for a,b in match_lowe(indexj, fi, config)]
+        matches_ij = [(a,b) for a,b in match_lowe(indexi, fj, config, im1_seg,
+                                                 im2_seg)]
+        matches_ji = [(b,a) for a,b in match_lowe(indexj, fi, config, im2_seg,
+                                                 im1_seg)]
     else:
-        matches_ij = [(a,b) for a,b in match_lowe_bf(fi, fj, config)]
+        matches_ij = [(a,b) for a,b in match_lowe_bf(fi, fj, config, im1_seg,
+                                                    im2_seg)]
 
         match1 = np.array(matches_ij)
         fj_new2old = match1[:, 1]
         fj=fj[fj_new2old,:]
 
-        matches_ji = [(b,a) for a,b in match_lowe_bf(fj, fi, config)]
+        matches_ji = [(b,a) for a,b in match_lowe_bf(fj, fi, config, im2_seg,
+                                                     im1_seg)]
 
         matches_ji = [(a,fj_new2old[b]) for a,b in matches_ji]
 
@@ -56,7 +66,7 @@ def convert_matches_to_vector(matches):
         k = k+1
     return matches_vector
 
-def match_lowe_bf(f1, f2, config):
+def match_lowe_bf(f1, f2, config, im1_seg=None, im2_seg=None):
     '''Bruteforce feature matching
     '''
     assert(f1.dtype.type==f2.dtype.type)
@@ -67,14 +77,24 @@ def match_lowe_bf(f1, f2, config):
     matcher = cv2.DescriptorMatcher_create(matcher_type)
     # f1=querys f2=train
     matches = matcher.knnMatch(f1, f2, k=2)
-
     ratio = config.get('lowes_ratio', 0.6)
     good_matches = []
+    counter = 0
     for match in matches:
         if match and len(match) == 2:
             m, n = match
+            if im1_seg is not None:
+                idx1 = m.queryIdx
+                idx2 = n.trainIdx
+                if im1_seg[idx1] == 0 and im2_seg[idx2] == 0:
+                    ratio = 1
+                else:
+                    ratio = config.get('lowes_ratio', 0.6)
+            else:
+                ratio = config.get('lowes_ratio', 0.6)
             if m.distance < ratio * n.distance:
                 good_matches.append(m)
+
     good_matches = convert_matches_to_vector(good_matches)
     return np.array(good_matches, dtype=int)
 

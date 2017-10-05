@@ -3,15 +3,15 @@ use_exif_size: yes
 default_focal_prior: 0.85     # TODO: tune
 
 # Params for features
-feature_type: ORB            # Yang: Feature type (AKAZE, SURF, SIFT, ORB)
-feature_root: 0               # Yang: If 1, apply square root mapping to features
-feature_min_frames: 4000      # If fewer frames are detected, sift_peak_threshold/surf_hessian_threshold is reduced.
+feature_type: SIFT            # Yang: Feature type (AKAZE, SURF, SIFT, ORB)
+feature_root: 1               # Yang: If 1, apply square root mapping to features
+feature_min_frames: 8000      # If fewer frames are detected, sift_peak_threshold/surf_hessian_threshold is reduced.
 feature_process_size: 2048    # Resize the image if its size is larger than specified. Set to -1 for original size
 feature_use_adaptive_suppression: no
 
 # Params for SIFT
-sift_peak_threshold: 0.01     # Yang: Smaller value -> more features
-sift_edge_threshold: 10       # See OpenCV doc
+sift_peak_threshold: 0.001     # Yang: Smaller value -> more features
+sift_edge_threshold: 40      # See OpenCV doc
 
 # Params for SURF
 surf_hessian_threshold: 3000  # Smaller value -> more features
@@ -32,7 +32,7 @@ hahog_edge_threshold: 10
 # Yang: Params for ORB
 orb_scaleFactor: 1.2
 orb_nlevels: 8
-orb_fastThreshold: 20
+orb_fastThreshold: 10
 
 # Params for general matching
 lowes_ratio: 0.8              # Ratio test for matches
@@ -98,7 +98,7 @@ bundle_interval: 4              # Yang: bundle adjustment after adding 'bundle_i
 bundle_new_points_ratio: 1.2    # bundle when (new points) / (bundled points) > bundle_new_points_ratio
 bundle_outlier_threshold: 0.006 # After bundling, if the returned reprojection error of a 3D point is too large, remove it
 bundle_local_neighbour: 10      # Yang: if > 0, then use the local bundler with specified neighbours
-bundle_use_gps: yes                    # Yang: Enforce GPS position in bundle adjustment
+bundle_use_gps: no                    # Yang: Enforce GPS position in bundle adjustment
 bundle_use_gcp: no                    # Enforce Ground Control Point position in bundle adjustment
 # TODO done
 
@@ -133,4 +133,4 @@ depthmap_min_consistent_views: 3      # Min number of views that should reconstr
 depthmap_save_debug_files: no         # Save debug files with partial reconstruction results
 
 # Other params
-processes: 8                  # Yang: Number of threads to use
+processes: 16                  # Yang: Number of threads to use

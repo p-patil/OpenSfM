@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 VIDEO_PATH=$1
 OUTPUT_PATH=$2
 

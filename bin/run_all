@@ -38,7 +38,7 @@ fi
 python opensfm/car/generate_mask.py $1 \
         --image_height=720 \
         --hood_height=150 \
-        --seg_relative_path="output/results/joint" \
+        --seg_relative_path="output/results/frontend_vgg" \
         --gpu=$2
 
 # TODO debug

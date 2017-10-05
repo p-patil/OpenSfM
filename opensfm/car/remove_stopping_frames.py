@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-
+import sys
+sys.path.append("/home/abobu/OpenSfM/")
+import numpy as np
+from PIL import Image 
 from opensfm import dataset
 import os
 import argparse
@@ -7,6 +10,7 @@ from opensfm import matching
 import cv2
 import subprocess
 import shutil
+from pathlib2 import Path
 
 def homography_inlier_ratio(p1, p2, matches, args):
     # test whether this pair forms a homography
@@ -62,16 +66,44 @@ def main():
             else:
                 im1_matches = {}
             modified = False
+            
+            # Include segmentations
+            path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im1)[0]+'.png'    
+            file_name = Path(path_seg)
+            if file_name.is_file():
+                im1_seg = Image.open(path_seg)
+                im1_seg = np.array(im1_seg)
+            
+                idx_u1 = im1_seg.shape[1]*(p1[:,0] + 0.5)
+                idx_v1 = im1_seg.shape[0]*(p1[:,1] + 0.5)
+                im1_seg = im1_seg[idx_v1.astype(np.int),idx_u1.astype(np.int)]
+            else:
+                im1_seg = None
 
             for im2i in range(im1i+1, len(images)):
                 # match this image against the inow
                 im2 = images[im2i]
                 p2, f2, c2 = data.load_features(im2)
+
+                path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im2)[0]+'.png'    
+                file_name = Path(path_seg)
+                if file_name.is_file():
+                    im2_seg = Image.open(path_seg)
+                    im2_seg = np.array(im2_seg)
+                else:
+                    im2_seg = None
                 if im2 not in im1_matches:
                     modified = True
                     i2 = data.load_feature_index(im2, f2)
-
-                    matches = matching.match_symmetric(f1, i1, f2, i2, config)
+                    
+                    if file_name.is_file():
+                        idx_u2 = im2_seg.shape[1]*(p2[:,0]+0.5)
+                        idx_v2 = im2_seg.shape[0]*(p2[:,1]+0.5)
+                        im2_seg = im2_seg[idx_v2.astype(np.int),idx_u2.astype(np.int)]
+                    else:
+                        ims2_seg = None
+                    matches = matching.match_symmetric(f1, i1, f2, i2, config,
+                                                      im1_seg, im2_seg)
 
                     if len(matches) < robust_matching_min_match:
                         # this image doesn't have enough matches with the first one

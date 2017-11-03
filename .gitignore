@@ -17,12 +17,7 @@ opensfm/car/segment/
 *nfs*
 *.lprof
 
-# Ignore the data folder, but not the berlin example.
-data_sync/
+data
 data/*
-data/berlin/*
-!data/berlin
-!data/berlin/config.yaml
-!data/berlin/images
 
 eval

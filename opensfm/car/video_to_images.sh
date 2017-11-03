@@ -7,6 +7,9 @@ then
     echo "video hasn't been converted to images, converting"
     mkdir $OUTPUT_PATH
     ffmpeg -i "$VIDEO_PATH" -qscale:v 3 -threads 8 "$OUTPUT_PATH/%04d.jpg"
+else
+    echo "video has already been converted to images"
 fi
 
 echo "exit"
+echo

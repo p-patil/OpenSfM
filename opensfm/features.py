@@ -339,6 +339,7 @@ def extract_features(color_image, config, mask=None, save_no_mask=False,
     xs = points[:,0].round().astype(int)
     ys = points[:,1].round().astype(int)
     colors = color_image[ys, xs]
+
     
     # Get segmentation for coloring
     if path_seg:

@@ -129,21 +129,20 @@ if __name__ == "__main__":
 
     if not os.path.exists(path_mask):
         if not os.path.exists(path_seg):
+            print "generating segmentations"
+
             # segmentation not exist yet, call dilation
             e = subprocess.call(
                 ["opensfm/car/generate_segmentation.sh", path_images, str(args.image_height), str(args.gpu)])
-            exit() # TODO remove
             if e:
-                print "segmentation generation exited with status %i" % e
-                print "exit"
-                print
+                print "generate_segmentation.sh exited with status %s" % str(e) 
+                print "exit\n"
                 exit(0)
 
         os.mkdir(path_mask)
     else:
-        print "mask has already been generated"
-        print "exit"
-        print
+        print "masks have already been generated"
+        print "exit\n"
         exit()
 
     # convert segmentation into masks
@@ -153,5 +152,4 @@ if __name__ == "__main__":
                         os.path.join(path_mask, item),
                         int(args.hood_height))
     
-    print "exit"
-    print
+    print "exit\n"

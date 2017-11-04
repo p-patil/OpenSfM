@@ -19,6 +19,8 @@ class Command:
         parser.add_argument('dataset', help='dataset to process')
 
     def run(self, args):
+        print "extracting metadata"
+
         start = time.time()
         data = dataset.DataSet(args.dataset)
 
@@ -56,3 +58,5 @@ class Command:
         end = time.time()
         with open(data.profile_log(), 'a') as fout:
             fout.write('focal_from_exif: {0}\n'.format(end - start))
+
+        print "exit\n"

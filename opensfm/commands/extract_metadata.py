@@ -23,6 +23,8 @@ class Command:
 
         start = time.time()
         data = dataset.DataSet(args.dataset)
+        print "EXIF PATH: %s" % str(data.__exif_path())
+        __import__("sys").exit()
 
         camera_models = {}
         for image in data.images():

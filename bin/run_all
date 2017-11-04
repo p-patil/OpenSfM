@@ -52,6 +52,9 @@ python opensfm/car/generate_mask.py $DATA_DIR \
         --seg_relative_path="output/results/frontend_vgg" \
         --gpu=$GPU_NUM
 
+# TODO remove (just generating masks for now)
+exit
+
 # TODO debug
 $PROFILE $DIR/opensfm extract_metadata $DATA_DIR
 $PROFILE $DIR/opensfm detect_features $DATA_DIR

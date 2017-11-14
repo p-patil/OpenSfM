@@ -1,6 +1,4 @@
-import copy
-import logging
-import time
+import copy, logging, time, os
 from PIL import Image
 
 from opensfm import dataset
@@ -21,8 +19,12 @@ class Command:
     def run(self, args):
         print "extracting metadata"
 
-        start = time.time()
         data = dataset.DataSet(args.dataset)
+        if os.path.exists(data.exif_path()):
+            print "exifs already generated, exit\n"
+            return
+
+        start = time.time()
 
         camera_models = {}
         for image in data.images():

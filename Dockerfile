@@ -154,3 +154,4 @@ RUN pip install \
     pathlib2 \
     sklearn \
     numba
+    sklearn

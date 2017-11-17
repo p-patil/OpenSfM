@@ -210,6 +210,10 @@ class DataSet:
                 self.mask_list.append(name)
                 self.mask_files[name] = path
 
+    # TODO(piyush) clean this up
+    def exif_path(self):
+        return self.__exif_path()
+
     def __exif_path(self):
         """Return path of extracted exif directory"""
         return os.path.join(self.data_path, 'exif')
@@ -264,6 +268,10 @@ class DataSet:
         if len(self.descriptor_type()) > 0:
             __feature_path += '_' + self.descriptor_type()
         return os.path.join(self.data_path, __feature_path)
+
+    # TODO(piyush) clean this up
+    def feature_path(self, image):
+        return self.__feature_file(image)
 
     def __feature_file(self, image):
         """

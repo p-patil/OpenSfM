@@ -25,12 +25,12 @@ class Command:
         start = time.time()
 
         processes = data.config.get('processes', 1)
-        processes = 1 # TODO remove
+        processes = 1 # TODO(piyush) remove
         if processes == 1:
             for arg in arguments:
-                t0=time.time()
+                t0 = time.time()
                 detect(arg)
-                print("total detect time in %f second" % (time.time()-t0))
+                print("total detect time in %f second" % (time.time() - t0))
         else:
             print "starting pool of %i processes to detect features" % processes
             p = Pool(processes)
@@ -50,8 +50,8 @@ def detect(args):
     image, data = args
     print prefix + "detecting features for image %s" % image
     logger.info('Extracting {} features for image {}'.format(data.feature_type().upper(), image))
-    
-    if not data.features_exist(image):
+
+    if not data.features_exist(image) and not os.path.exists(data.feature_path(image)):
         mask = data.mask_as_array(image)
         if mask is not None:
             print prefix + "found mask for image: %s" % image

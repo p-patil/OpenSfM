@@ -105,6 +105,7 @@ RUN apt-get update && \
         python-pyexiv2 \
         python-pyproj \
         python-scipy \
+        python-tk \
         python-yaml \
         unzip && \
     apt-get clean && \
@@ -151,4 +152,6 @@ RUN pip install \
     exifread \
     xmltodict \
     pathlib2 \
+    sklearn \
+    numba
     sklearn

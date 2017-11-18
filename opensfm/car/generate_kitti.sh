@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Dilation lib path
-DILATION_BIN="/home/hxu/Reconstruction/bundler_sfm/data/dilation"
+DILATION_BIN="/home/piyush/Academics/Berkeley/deepdrive/dilation"
 PRETRAINED_MODEL=${DILATION_BIN}"/pretrained/dilation10_cityscapes.caffemodel"
 # some other flags to be set
 GPU=0

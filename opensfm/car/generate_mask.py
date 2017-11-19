@@ -7,7 +7,7 @@ import numpy as np
 #import matplotlib.pyplot as pl
 import cv2
 import sys
-sys.path.append("/root/deepdrive/OpenSfM")
+sys.path.append("/root/OpenSfM")
 
 def convert_mask(value):
     # city scape features here

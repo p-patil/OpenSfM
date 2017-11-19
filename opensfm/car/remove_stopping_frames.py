@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-sys.path.append("/home/piyush/Academics/Berkeley/deepdrive/OpenSfM")
+sys.path.append("/root/OpenSfM")
 import numpy as np
 from PIL import Image 
 from opensfm import dataset

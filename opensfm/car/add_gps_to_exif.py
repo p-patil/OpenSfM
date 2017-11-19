@@ -1,5 +1,5 @@
 import sys, os
-sys.path.append("/home/piyush/Academics/Berkeley/deepdrive/OpenSfM")
+sys.path.append("/root/OpenSfM")
 from opensfm.car import parse_ride_json
 from opensfm.pexif import JpegFile
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DILATION_BIN="/home/piyush/Academics/Berkeley/deepdrive/dilation"
+DILATION_BIN="/root/dilation"
 PRETRAINED_MODEL=${DILATION_BIN}"/pretrained/dilation10_cityscapes.caffemodel"
 
 # input flags

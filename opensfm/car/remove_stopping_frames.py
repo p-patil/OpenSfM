@@ -2,7 +2,7 @@
 import sys
 sys.path.append("/root/deepdrive/OpenSfM")
 import numpy as np
-from PIL import Image 
+from PIL import Image
 from opensfm import dataset
 import os
 import argparse
@@ -41,6 +41,7 @@ def get_segmentations(data, im, p, round = False):
 
     return im_seg
 
+# TODO align print statements
 def remove_stopping_frames_not_good(args):
     data = dataset.DataSet(args.dataset)
 
@@ -92,16 +93,36 @@ def remove_stopping_frames_not_good(args):
 
     return retained, indexes
 
+def get_cache(matches_path):
+    cache_path = os.path.join(os.path.dirname(matches_path), "matches_cache.txt")
+
+    computed = os.path.exists(cache_path)
+    if computed:
+        print("found cache of matched images")
+        with open(cache_path, "r") as f:
+            computed_matches = set([line.strip() for line in f.readlines() if len(line) > 0])
+
+        print("augmenting cache by reading matches directory")
+        for matches_file in os.listdir(matches_path):
+            image1 = matches_file[: - len("_matches.pkl.gz")]
+
+            import gzip, pickle
+            with gzip.open(os.path.join(matches_path, matches_file), "rb") as f:
+                matches = pickle.load(f)
+                for image2 in matches.keys():
+                    computed_matches.add("%s,%s" % (image1, image2))
+        print("found %i entries in cache" % len(computed_matches))
+    else:
+        computed_matches = None
+
+    return cache_path, computed, computed_matches
+
 def remove_stopping_frames_good(args):
     data = dataset.DataSet(args.dataset)
     config = data.config
 
     # Check which, if any, matches have already been computed
-    cache_path = os.path.join(os.path.dirname(data.matches_path()), "matches_cache.txt")
-    computed = os.path.exists(cache_path)
-    if computed:
-        with open(cache_path, "r") as f:
-            computed_matches = set([line.strip() for line in f.readlines() if len(line) > 0])
+    cache_path, computed, computed_matches = get_cache(data.matches_path())
 
     # The current image, next image is used as potentials to be the same as this image
     images = sorted(data.images())
@@ -112,9 +133,13 @@ def remove_stopping_frames_good(args):
     cameras = data.load_camera_models()
     exifs = {im: data.load_exif(im) for im in images}
 
+    print("computing matches")
+
     im1i = 0
     while im1i + 1 < len(images):
         im1 = images[im1i]
+
+        print("processing image %s" % im1)
 
         p1, f1, c1 = data.load_features(im1)
         i1 = data.load_feature_index(im1, f1)
@@ -130,10 +155,15 @@ def remove_stopping_frames_good(args):
         for im2i in range(im1i + 1, len(images)):
             im2 = images[im2i]
 
+            # Print without newline
+            print("\tmatching %s against %s " % (im1, im2))
+
             # Check if already computed, and if not, mark as computed
             if computed and "%s,%s" % (im1, im2) in computed_matches:
+                print("\t\tcache hit")
                 continue
-            elif not computed:
+            else:
+                print("\t\twriting to cache")
                 with open(cache_path, "a") as f:
                     f.write("%s,%s\n" % (im1, im2))
 
@@ -146,12 +176,14 @@ def remove_stopping_frames_good(args):
                 # Include segmentations
                 im1_seg = get_segmentations(data, im1, p1, round = True)
                 im2_seg = get_segmentations(data, im2, p2, round = im2 not in im1_matches)
+
+                sys.stdout.write("\t\t") # Prepend tabs in prints of match_symmetric
                 matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg, im2_seg)
 
                 if len(matches) < robust_matching_min_match:
                     # This image doesn't have enough matches with the first one i.e. either of
                     # them is broken; to be safe throw away both
-                    print("%s and %s don't have enough matches, skipping" % (im1, im2))
+                    print("\t%s and %s don't have enough matches, skipping" % (im1, im2))
                     im1i = im2i + 1
                     break
 
@@ -168,12 +200,12 @@ def remove_stopping_frames_good(args):
                 rmatches = im1_matches[im2]
 
             if len(rmatches) < robust_matching_min_match:
-                print("%s and %s don't have enough robust matches, skipping" % (im1, im2))
+                print("\t%s and %s don't have enough robust matches, skipping" % (im1, im2))
                 im1i = im2i + 1
                 break
 
             inliers_ratio = homography_inlier_ratio(p1, p2, rmatches, args)
-            print("computed match between im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
+            print("\t\tcomputed match between im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
             if inliers_ratio <= float(args.homography_inlier_ratio):
                 # this figure considered as not the same
                 retained.append(im2)
@@ -181,7 +213,7 @@ def remove_stopping_frames_good(args):
                 im1i = im2i
                 break
             else:
-                print("homography inlier ratio is too high, throwing away %s" % im2)
+                print("\thomography inlier ratio is too high, throwing away %s" % im2)
         else:
             im1i += 1
 
@@ -203,6 +235,8 @@ def main():
                         help="could either be good or fast",
                         default="good")
 
+    print("removing stopping frames")
+
     args = parser.parse_args()
     data = dataset.DataSet(args.dataset)
 
@@ -217,6 +251,8 @@ def main():
     with open(image_list, "w") as f:
         for im in retained:
             f.write("images/" + im + "\n")
+
+    print("exit\n")
 
 if __name__ == "__main__":
     main()

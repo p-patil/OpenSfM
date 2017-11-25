@@ -54,6 +54,7 @@ RUN ldconfig
 ## Clean up
 RUN rm ~/opencv.zip ~/opencv_contrib.zip
 
+
 # Install Caffe
 ## Install apt-getable dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -94,6 +95,7 @@ RUN echo "$CAFFE_ROOT/build/lib" >> /etc/ld.so.conf.d/caffe.conf && ldconfig
 
 ## Done
 WORKDIR /root
+
 
 # Set up OpenSfM
 ## Install apt-getable dependencies
@@ -157,3 +159,13 @@ RUN pip install \
     sklearn \
     numba \
     sklearn
+
+
+# Initialize OpenSfM
+RUN mkdir -p /root/deepdrive && \
+    cd /root/deepdrive && \
+    git clone https://github.com/p-patil/OpenSfM.git && \
+    git clone https://github.com/fyu/dilation.git && \
+    cd OpenSfM && \
+    python setup.py build && \
+    ./update_paths "/root/deepdrive/OpenSfM" "/root/deepdrive/dilation"

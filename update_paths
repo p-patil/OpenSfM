@@ -14,10 +14,13 @@ output = subprocess.check_output( \
 
 # Fixed path
 if len(sys.argv) > 1:
-    fixed = ("sys.path.append(\"%s\")" % sys.argv[1]).replace("/", "\\/")
+    fixed_path = sys.argv[1]
+    fixed = ("sys.path.append(\"%s\")" % fixed_path).replace("/", "\\/")
 else:
     fixed_path = os.path.join(os.path.dirname(os.getcwd()), "OpenSfM")
     fixed = ("sys.path.append(\"%s\")" % fixed_path).replace("/", "\\/")
+
+print("Using path to OpenSfM directory \"%s\"" % fixed_path)
 
 # Search and replace with fixed path
 for line in output:
@@ -28,7 +31,11 @@ for line in output:
     index = line.index(":")
     file_name, path_line = line[: index], line[index + 1 :].replace("/", "\\/")
 
+    print("In file %s: Replacing \"%s\" with \"%s\"" % (file_name, path_line.replace("\\/", "/"), fixed.replace("\\/", "/")))
+
     subprocess.run(["sed", "-i", "s/%s/%s/g" % (path_line, fixed), file_name])
+
+print()
 
 # Get files that require a path to DILATION directory
 output = subprocess.check_output( \
@@ -40,10 +47,13 @@ output = subprocess.check_output( \
 
 # Fixed path
 if len(sys.argv) > 2:
-    fixed = ("DILATION_BIN=\"%s\"" % sys.argv[2]).replace("/", "\\/")
+    fixed_path = sys.argv[2]
+    fixed = ("DILATION_BIN=\"%s\"" % fixed_path).replace("/", "\\/")
 else:
     fixed_path = os.path.join(os.path.dirname(os.getcwd()), "dilation")
     fixed = ("DILATION_BIN=\"%s\"" % fixed_path).replace("/", "\\/")
+
+print("Using path to Dilation directory \"%s\"" % fixed_path)
 
 # Search and replace with fixed dilation path
 for line in output:
@@ -52,6 +62,8 @@ for line in output:
         continue
 
     index = line.index(":")
-    file_name, path_line = line[: index], line[index + 1: ].replace("/", "\\/")
+    file_name, path_line = line[: index], line[index + 1 :].replace("/", "\\/")
+
+    print("In file %s: Replacing \"%s\" with \"%s\"" % (file_name, path_line.replace("\\/", "/"), fixed.replace("\\/", "/")))
 
     subprocess.run(["sed", "-i", "s/%s/%s/g" % (path_line, fixed), file_name])

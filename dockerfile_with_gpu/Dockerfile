@@ -165,5 +165,7 @@ RUN pip install \
 RUN mkdir -p /root/deepdrive && \
     cd /root/deepdrive && \
     git clone https://github.com/p-patil/OpenSfM.git && \
+    git clone https://github.com/fyu/dilation.git && \
     cd OpenSfM && \
-    python setup.py build
+    python setup.py build && \
+    ./update_paths "/root/deepdrive/OpenSfM" "/root/deepdrive/dilation"

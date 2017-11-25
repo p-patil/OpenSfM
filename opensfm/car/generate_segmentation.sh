@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Dilation lib path on durian9
-#DILATION_BIN="/home/hxu/Reconstruction/bundler_sfm/data/dilation"
+DILATION_BIN="/root/deepdrive/dilation"
 # Dilation on Kraken
 DILATION_BIN="/root/deepdrive/dilation"
 

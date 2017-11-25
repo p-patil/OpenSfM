@@ -5,6 +5,7 @@ FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
 # Install OpenCV from source, including contrib modules
 ## Install apt-getable dependencies
 RUN apt-get update && apt-get install -y \
+        awscli \
         build-essential \
         cmake \
         git \
@@ -53,6 +54,7 @@ RUN ldconfig
 ## Clean up
 RUN rm ~/opencv.zip ~/opencv_contrib.zip
 
+
 # Install Caffe
 ## Install apt-getable dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -94,6 +96,7 @@ RUN echo "$CAFFE_ROOT/build/lib" >> /etc/ld.so.conf.d/caffe.conf && ldconfig
 ## Done
 WORKDIR /root
 
+
 # Set up OpenSfM
 ## Install apt-getable dependencies
 RUN apt-get update && \
@@ -106,7 +109,7 @@ RUN apt-get update && \
         python-pyexiv2 \
         python-pyproj \
         python-scipy \
-	python-tk \
+        python-tk \
         python-yaml \
         unzip && \
     apt-get clean && \
@@ -154,5 +157,13 @@ RUN pip install \
     xmltodict \
     pathlib2 \
     sklearn \
-    numba
+    numba \
     sklearn
+
+
+# Initialize OpenSfM
+RUN mkdir -p /root/deepdrive && \
+    cd /root/deepdrive && \
+    git clone https://github.com/p-patil/OpenSfM.git && \
+    cd OpenSfM && \
+    python setup.py build

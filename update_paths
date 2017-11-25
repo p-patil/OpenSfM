@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+# TODO streamline this into one grep | sed command
+
 import subprocess, sys, os
 
 # Get files that require manual PYTHONPATH appends

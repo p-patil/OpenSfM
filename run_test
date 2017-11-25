@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+if [[ -z "$1" ]]; then
+    echo "Expected 1 argument: path to data directory"
+    exit
+fi
+
+echo "Using data directory $1"
+echo
+
+DATA_DIR=$1
+
+#PROFILE=""
+
+#set -e
+
+#DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+## rm_generated.sh
+
+#if [ ! -f "$DATA_DIR/config.yaml" ];
+#then
+    #cp config.yaml "$DATA_DIR/config.yaml"
+#fi
+
+## mov to images
+#MOV_PATH=$( ls "$DATA_DIR" | grep "mov" | more)
+#opensfm/car/video_to_images.sh "$DATA_DIR/$MOV_PATH" "$DATA_DIR/images"
+
+## add gps to images
+#python opensfm/car/add_gps_to_exif.py $DATA_DIR
+
+## currently disable blurry detection, since it does not seem to affect a lot
+##python opensfm/car/blurry_detection.py $DATA_DIR \
+##        --threshold=100.0
+
+## if there is an image_list.txt.with_stop, then copy it to image_list.txt
+#if [ -e "$DATA_DIR/image_list.txt.with_stop" ]
+#then
+    #echo "overwriting image_list.txt with image_list.txt.with_stop"
+    #yes | cp -rf "$DATA_DIR/image_list.txt.with_stop" "$DATA_DIR/image_list.txt"
+    #echo "done"
+    #echo
+#fi
+
+#python opensfm/car/generate_mask.py $DATA_DIR \
+        #--image_height=720 \
+        #--hood_height=150 \
+        #--seg_relative_path="output/results/frontend_vgg" \
+        #--gpu=$GPU_NUM
+
+## TODO debug
+#$PROFILE $DIR/opensfm extract_metadata $DATA_DIR
+#$PROFILE $DIR/opensfm detect_features $DATA_DIR
+
+# same frame detection & removal
+# TODO: determine good value for inlier ratio
+$PROFILE opensfm/car/remove_stopping_frames.py $DATA_DIR \
+        --homography_ransac_threshold=0.004 \
+        --homography_inlier_ratio=0.85 \
+        --matching_mod="good"
+
+#$PROFILE $DIR/opensfm match_features $DATA_DIR
+#$PROFILE $DIR/opensfm create_tracks $DATA_DIR
+#$PROFILE $DIR/opensfm reconstruct $DATA_DIR
+#$PROFILE $DIR/opensfm mesh $DATA_DIR
+
+# the unused scripts in car
+# match_homography.py
+# static_removal.py

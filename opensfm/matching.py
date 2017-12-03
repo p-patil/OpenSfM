@@ -28,26 +28,26 @@ def match_lowe(index, f2, config, im1_seg=None, im2_seg=None):
 
 def match_symmetric(fi, indexi, fj, indexj, config, im1_seg=None, im2_seg=None):
     t = time.time()
-    sys.stdout.write("symmetric matching commencing... ")
+    sys.stdout.write("symmetric matching commencing... ") # Print without newline
     sys.stdout.flush()
+
     if config.get('matcher_type', 'FLANN') == 'FLANN':
-        matches_ij = [(a,b) for a,b in match_lowe(indexi, fj, config, im1_seg,
-                                                 im2_seg)]
-        matches_ji = [(b,a) for a,b in match_lowe(indexj, fi, config, im2_seg,
-                                                 im1_seg)]
+        matches_ij = [(a,b) for a,b in match_lowe(indexi, fj, config, im1_seg, im2_seg)]
+        matches_ji = [(b,a) for a,b in match_lowe(indexj, fi, config, im2_seg, im1_seg)]
     else:
-        matches_ij = [(a,b) for a,b in match_lowe_bf(fi, fj, config, im1_seg,
-                                                    im2_seg)]
+        # Compute keypoint matches based on distance, from image 2 to image 1
+        matches_ij = [(a,b) for a,b in match_lowe_bf(fi, fj, config, im1_seg, im2_seg)]
 
         match1 = np.array(matches_ij)
         fj_new2old = match1[:, 1]
         fj=fj[fj_new2old,:]
 
-        matches_ji = [(b,a) for a,b in match_lowe_bf(fj, fi, config, im2_seg,
-                                                     im1_seg)]
+        # Compute keypoint matches based on distance, from image 1 to image 2
+        matches_ji = [(b,a) for a,b in match_lowe_bf(fj, fi, config, im2_seg, im1_seg)]
 
         matches_ji = [(a,fj_new2old[b]) for a,b in matches_ji]
 
+    # Return common matches
     matches = set(matches_ij).intersection(set(matches_ji))
     print("done. matching time: %s seconds" % str(time.time() - t))
     return np.array(list(matches), dtype=int)
@@ -73,8 +73,11 @@ def match_lowe_bf(f1, f2, config, im1_seg=None, im2_seg=None):
     else:
         matcher_type = 'BruteForce'
     matcher = cv2.DescriptorMatcher_create(matcher_type)
-    # f1=querys f2=train
+
+    # For each descriptor in f1, compute k best matches f2
     matches = matcher.knnMatch(f1, f2, k=2)
+
+    # Filter for sufficiently close matches
     ratio = config.get('lowes_ratio', 0.6)
     good_matches = []
     counter = 0

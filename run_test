@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ -z "$1" ]]; then
-    echo "Expected 1 argument: path to data directory"
-    exit
-fi
-
-echo "Using data directory $1"
-echo
-
-DATA_DIR=$1
+DATA_DIR="data/richmond_campus"
 
 #PROFILE=""
 

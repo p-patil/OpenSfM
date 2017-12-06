@@ -31,12 +31,17 @@ class Command:
             return
         '''
 
+        print("matching features")
+
         images = data.images()
         exifs = {im: data.load_exif(im) for im in images}
+
+        print("computing image pairs to compute matches between")
         pairs = match_candidates_from_metadata(images, exifs, data)
 
         num_pairs = sum(len(c) for c in pairs.values())
         logger.info('Matching {} image pairs'.format(num_pairs))
+        print("found %i pairs" % num_pairs)
 
         ctx = Context()
         ctx.data = data
@@ -47,18 +52,21 @@ class Command:
 
         start = time.time()
         processes = ctx.data.config.get('processes', 1)
-        print(processes)
-        __import__("sys").exit()
         if processes == 1:
+            print("matching")
             for arg in args:
                 match(arg)
         else:
+            print("matching using %i processes" % processes)
             p = Pool(processes)
             p.map(match, args)
         end = time.time()
+
+        print("finished matching, in %s seconds" % str(end - start))
         with open(ctx.data.profile_log(), 'a') as fout:
             fout.write('match_features: {0}\n'.format(end - start))
 
+        print("exit\n")
 
 class Context:
     pass
@@ -173,15 +181,16 @@ def match(args):
     Compute all matches for a single image
     '''
     im1, candidates, i, n, ctx = args
+    print("matching %s - %i/%i" % (im1, i + 1, n))
     logger.info('Matching {}  -  {} / {}'.format(im1, i + 1, n))
 
     config = ctx.data.config
-    robust_matching_min_match = config['robust_matching_min_match']
-    preemptive_threshold = config['preemptive_threshold']
-    lowes_ratio = config['lowes_ratio']
-    preemptive_lowes_ratio = config['preemptive_lowes_ratio']
+    robust_matching_min_match = config["robust_matching_min_match"]
+    preemptive_threshold = config["preemptive_threshold"]
+    lowes_ratio = config["lowes_ratio"]
+    preemptive_lowes_ratio = config["preemptive_lowes_ratio"]
 
-    path_seg = ctx.data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im1)[0]+'.png'
+    path_seg = ctx.data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im1)[0] + ".png"
     file_name = Path(path_seg)
     if file_name.is_file():
         im1_seg = Image.open(path_seg)
@@ -191,8 +200,8 @@ def match(args):
     # if we are using bruteforce matching, the loaded index will simply be False.
     i1 = ctx.data.load_feature_index(im1, f1)
     if file_name.is_file():
-        idx_u1 = im1_seg.shape[1]*(p1[:,0] + 0.5)
-        idx_v1 = im1_seg.shape[0]*(p1[:,1] + 0.5)
+        idx_u1 = im1_seg.shape[1] * (p1[:, 0] + 0.5)
+        idx_v1 = im1_seg.shape[0] * (p1[:, 1] + 0.5)
         im1_seg = im1_seg[idx_v1.astype(np.int),idx_u1.astype(np.int)]
     else:
         im1_seg = None
@@ -206,7 +215,7 @@ def match(args):
         if im2 in im1_matches:
             continue
 
-        path_seg = ctx.data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im2)[0]+'.png'
+        path_seg = ctx.data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im2)[0] + ".png"
         file_name = Path(path_seg)
         if file_name.is_file():
             im2_seg = Image.open(path_seg)
@@ -216,19 +225,19 @@ def match(args):
         i2 = ctx.data.load_feature_index(im2, f2)
 
         if file_name.is_file():
-            idx_u2 = im2_seg.shape[1]*(p2[:,0]+0.5)
-            idx_v2 = im2_seg.shape[0]*(p2[:,1]+0.5)
-            im2_seg = im2_seg[idx_v2.astype(np.int),idx_u2.astype(np.int)]
+            idx_u2 = im2_seg.shape[1] * (p2[:, 0] + 0.5)
+            idx_v2 = im2_seg.shape[0] * (p2[:, 1] + 0.5)
+            im2_seg = im2_seg[idx_v2.astype(np.int), idx_u2.astype(np.int)]
         else:
             im2_seg = None
 
         # preemptive matching
         if preemptive_threshold > 0:
             t = time.time()
-            config['lowes_ratio'] = preemptive_lowes_ratio
+            config["lowes_ratio"] = preemptive_lowes_ratio
             matches_pre = matching.match_lowe_bf(
                 ctx.f_pre[im1], ctx.f_pre[im2], config, im1_seg, im2_seg)
-            config['lowes_ratio'] = lowes_ratio
+            config["lowes_ratio"] = lowes_ratio
             logger.debug("Preemptive matching {0}, time: {1}s".format(
                 len(matches_pre), time.time() - t))
             if len(matches_pre) < preemptive_threshold:
@@ -240,10 +249,8 @@ def match(args):
         # symmetric matching
         t = time.time()
 
-        matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg,
-                                           im2_seg)
-        logger.debug('{} - {} has {} candidate matches'.format(
-            im1, im2, len(matches)))
+        matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg, im2_seg)
+        logger.debug('{} - {} has {} candidate matches'.format(im1, im2, len(matches)))
         if len(matches) < robust_matching_min_match:
             im1_matches[im2] = []
             continue

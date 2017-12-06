@@ -63,7 +63,7 @@ fi
         #--homography_inlier_ratio=0.85 \
         #--matching_mod="good"
 
-DATA_DIR="data/richmond_campus"
+DATA_DIR="data/richmond_campus_small"
 DIR="bin"
 $PROFILE $DIR/opensfm match_features $DATA_DIR
 #$PROFILE $DIR/opensfm create_tracks $DATA_DIR

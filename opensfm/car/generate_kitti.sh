@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Dilation lib path
-DILATION_BIN="/root/deepdrive/dilation"
+DILATION_BIN="/root/deepdrive/debugging_remove_stop_frames/dilation"
 PRETRAINED_MODEL=${DILATION_BIN}"/pretrained/dilation10_cityscapes.caffemodel"
 # some other flags to be set
 GPU=0

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, os, argparse, cv2, subprocess, shutil, time
-sys.path.append("/root/deepdrive/OpenSfM")
+sys.path.append("/root/deepdrive/debugging_remove_stop_frames/OpenSfM")
 import numpy as np
 from PIL import Image
 from opensfm import dataset, matching
@@ -240,93 +240,100 @@ def remove_stopping_frames_good(args):
 
     print("computing matches")
 
-    process_images(args, data, images, config)
+    # process_images(args, data, images, config)
 
-    # im1i = 0
-    # while im1i + 1 < len(images):
-        # im1 = images[im1i]
+    im1i = 0
+    while im1i + 1 < len(images):
+        im1 = images[im1i]
 
-        # print("processing image %s" % im1)
+        print("processing image %s" % im1)
 
-        # p1, f1, c1 = data.load_features(im1)
-        # i1 = data.load_feature_index(im1, f1)
+        p1, f1, c1 = data.load_features(im1)
+        i1 = data.load_feature_index(im1, f1)
 
-        # # Get the cached features
-        # if data.matches_exists(im1):
-            # im1_matches = data.load_matches(im1)
-        # else:
-            # im1_matches = {}
+        # Get the cached features
+        if data.matches_exists(im1):
+            im1_matches = data.load_matches(im1)
+        else:
+            im1_matches = {}
 
-        # # Match against all subsequent images
-        # modified = False
-        # for im2i in range(im1i + 1, len(images)):
-            # im2 = images[im2i]
+        # Match against all subsequent images
+        modified = False
+        for im2i in range(im1i + 1, len(images)):
+            im2 = images[im2i]
 
-            # print("\tmatching %s against %s " % (im1, im2))
+            print("\tmatching %s against %s " % (im1, im2))
 
-            # # # Check if already computed, and if not, mark as computed
-            # # if computed and "%s,%s" % (im1, im2) in computed_matches:
-                # # print("\t\tcache hit")
-                # # continue
-            # # else:
-                # # print("\t\twriting to cache")
-                # # with open(cache_path, "a") as f:
-                    # # f.write("%s,%s\n" % (im1, im2))
-
-            # p2, f2, c2 = data.load_features(im2)
-
-            # if im2 not in im1_matches:
-                # modified = True
-                # i2 = data.load_feature_index(im2, f2)
-
-                # # Include segmentations
-                # im1_seg = get_segmentations(data, im1, p1, round = True)
-                # im2_seg = get_segmentations(data, im2, p2, round = im2 not in im1_matches)
-
-                # sys.stdout.write("\t\t") # Prepend tabs in prints of match_symmetric
-                # matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg, im2_seg)
-
-                # if len(matches) < robust_matching_min_match:
-                    # # This image doesn't have enough matches with the first one i.e. either of
-                    # # them is broken; to be safe throw away both
-                    # print("\t%s and %s don't have enough matches, skipping" % (im1, im2))
-                    # im1i = im2i + 1
-                    # break
-
-                # # Robust matching
-                # camera1 = cameras[exifs[im1]["camera"]]
-                # camera2 = cameras[exifs[im2]["camera"]]
-
-                # rmatches = matching.robust_match(p1, p2, camera1, camera2, matches, config)
-                # if len(rmatches) < robust_matching_min_match:
-                    # im1_matches[im2] = []
-                # else:
-                    # im1_matches[im2] = rmatches
+            # # Check if already computed, and if not, mark as computed
+            # if computed and "%s,%s" % (im1, im2) in computed_matches:
+                # print("\t\tcache hit")
+                # continue
             # else:
-                # rmatches = im1_matches[im2]
+                # print("\t\twriting to cache")
+                # with open(cache_path, "a") as f:
+                    # f.write("%s,%s\n" % (im1, im2))
 
-            # if len(rmatches) < robust_matching_min_match:
-                # print("\t%s and %s don't have enough robust matches, skipping" % (im1, im2))
-                # im1i = im2i + 1
-                # break
+            # TODO fix
+            try:
+                p2, f2, c2 = data.load_features(im2)
+            except KeyError as e:
+                print(str(e))
+                print("\n\nERROR: Couldn't load features for %s\n" % im2)
+                if im2 not in im1_matches:
+                    im1i = im2i + 1
 
-            # inliers_ratio = homography_inlier_ratio(p1, p2, rmatches, args)
-            # print("\t\tcomputed match between im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
-            # if inliers_ratio <= float(args.homography_inlier_ratio):
-                # # this figure considered as not the same
-                # retained.append(im2)
-                # indexes.append(im2i)
-                # im1i = im2i
-                # break
-            # else:
-                # print("\thomography inlier ratio is too high, throwing away %s" % im2)
-        # else:
-            # im1i += 1
+            if im2 not in im1_matches:
+                modified = True
+                i2 = data.load_feature_index(im2, f2)
 
-        # if modified:
-            # data.save_matches(im1, im1_matches)
+                # Include segmentations
+                im1_seg = get_segmentations(data, im1, p1, round = True)
+                im2_seg = get_segmentations(data, im2, p2, round = im2 not in im1_matches)
 
-    # return retained, indexes
+                sys.stdout.write("\t\t") # Prepend tabs in prints of match_symmetric
+                matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg, im2_seg)
+
+                if len(matches) < robust_matching_min_match:
+                    # This image doesn't have enough matches with the first one i.e. either of
+                    # them is broken; to be safe throw away both
+                    print("\t%s and %s don't have enough matches, skipping" % (im1, im2))
+                    im1i = im2i + 1
+                    break
+
+                # Robust matching
+                camera1 = cameras[exifs[im1]["camera"]]
+                camera2 = cameras[exifs[im2]["camera"]]
+
+                rmatches = matching.robust_match(p1, p2, camera1, camera2, matches, config)
+                if len(rmatches) < robust_matching_min_match:
+                    im1_matches[im2] = []
+                else:
+                    im1_matches[im2] = rmatches
+            else:
+                rmatches = im1_matches[im2]
+
+            if len(rmatches) < robust_matching_min_match:
+                print("\t%s and %s don't have enough robust matches, skipping" % (im1, im2))
+                im1i = im2i + 1
+                break
+
+            inliers_ratio = homography_inlier_ratio(p1, p2, rmatches, args)
+            print("\t\tcomputed match between im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
+            if inliers_ratio <= float(args.homography_inlier_ratio):
+                # this figure considered as not the same
+                retained.append(im2)
+                indexes.append(im2i)
+                im1i = im2i
+                break
+            else:
+                print("\thomography inlier ratio is too high, throwing away %s" % im2)
+        else:
+            im1i += 1
+
+        if modified:
+            data.save_matches(im1, im1_matches)
+
+    return retained, indexes
 
 def main():
     parser = argparse.ArgumentParser()
@@ -345,6 +352,21 @@ def main():
 
     args = parser.parse_args()
     data = dataset.DataSet(args.dataset)
+
+    # TODO fix
+    print("Trying to load all features")
+    exceptions = {}
+    for image in sorted(data.images()):
+        try:
+            p2, f2, c2 = data.load_features(image)
+            print("Success: %s" % image)
+        except KeyError as e:
+            print("ERROR loading feature from %s" % image)
+            exceptions[image] = e
+    import pickle
+    with open("/tmp/exceptions.pkl", "wb") as f:
+        pickle.dump(exceptions, f)
+    __import__("sys").exit()
 
     start = time.time()
 

@@ -47,6 +47,8 @@ class Command:
 
         start = time.time()
         processes = ctx.data.config.get('processes', 1)
+        print(processes)
+        __import__("sys").exit()
         if processes == 1:
             for arg in args:
                 match(arg)
@@ -185,8 +187,8 @@ def match(args):
         im1_seg = Image.open(path_seg)
         im1_seg = np.array(im1_seg)
     p1, f1, c1 = ctx.data.load_features(im1)
-    
-    # if we are using bruteforce matching, the loaded index will simplily be False.
+
+    # if we are using bruteforce matching, the loaded index will simply be False.
     i1 = ctx.data.load_feature_index(im1, f1)
     if file_name.is_file():
         idx_u1 = im1_seg.shape[1]*(p1[:,0] + 0.5)
@@ -212,7 +214,7 @@ def match(args):
 
         p2, f2, c2 = ctx.data.load_features(im2)
         i2 = ctx.data.load_feature_index(im2, f2)
-        
+
         if file_name.is_file():
             idx_u2 = im2_seg.shape[1]*(p2[:,0]+0.5)
             idx_v2 = im2_seg.shape[0]*(p2[:,1]+0.5)

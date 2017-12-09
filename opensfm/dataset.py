@@ -358,6 +358,10 @@ class DataSet:
             self.config['matcher_type'] = matcher_type
         return matcher_type # BruteForce, BruteForce-L1, BruteForce-Hamming
 
+    # TODO(piyush) clean this up
+    def matches_path(self):
+        return self.__matches_path()
+
     def __matches_path(self):
         """Return path of matches directory"""
         return os.path.join(self.data_path, 'matches')

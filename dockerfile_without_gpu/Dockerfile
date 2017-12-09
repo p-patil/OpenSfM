@@ -114,3 +114,14 @@ RUN pip install \
     sklearn \
     numba \
     sklearn
+
+# Set up globus connect
+RUN yes | pip install globus-cli
+RUN useradd --create-home --home-dir /home/piyush --shell /bin/bash piyush
+USER piyush
+RUN cd /home/piyush && \
+    wget -O /home/piyush/globusconnectpersonal-latest.tgz https://s3.amazonaws.com/connect.globusonline.org/linux/stable/globusconnectpersonal-latest.tgz && \
+    tar -xzf globusconnectpersonal-latest.tgz && \
+    globus login --no-local-server && \
+    SETUP_KEY=$(globus endpoint create --personal Thinkpad-T440-Piyush | grep "Setup Key:" | cut -d ":" -f 2 | tr -d '[:space:]') && \
+    globusconnectpersonal-2.3.3/globusconnectpersonal -setup $SETUP_KEY

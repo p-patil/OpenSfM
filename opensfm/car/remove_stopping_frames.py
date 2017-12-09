@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys
-sys.path.append("/root/deepdrive/OpenSfM")
+sys.path.append("/home/piyush/Academics/Berkeley/deepdrive/mapping-dev/alpha/reconstruction/OpenSfM")
 import numpy as np
-from PIL import Image 
+from PIL import Image
 from opensfm import dataset
 import os
 import argparse
@@ -25,184 +25,234 @@ def homography_inlier_ratio(p1, p2, matches, args):
 
     return inliers_ratio
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('dataset', help='dataset to process')
-    parser.add_argument('--homography_ransac_threshold',
-                        help='the threshold used to match homography',
-                        default=0.004)
-    parser.add_argument('--homography_inlier_ratio',
-                        help='the lower bound of homography inlier ratio to be considered as the same frame',
-                        default=0.90)
-    parser.add_argument('--matching_mod',
-                        help='could either be good or fast',
-                        default="good")
+def get_segmentations(data, im, p, round = False):
+    path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im)[0]+".png"
+    file_name = Path(path_seg)
+    if file_name.is_file():
+        im_seg = Image.open(path_seg)
+        im_seg = np.array(im_seg)
 
-    args = parser.parse_args()
+        if round:
+            idx_u = im_seg.shape[1] * (p[:, 0] + 0.5)
+            idx_v = im_seg.shape[0] * (p[:, 1] + 0.5)
+            im_seg = im_seg[idx_v.astype(np.int), idx_u.astype(np.int)]
+    else:
+        im_seg = None
 
-    is_good = (args.matching_mod == "good")
+    return im_seg
+
+# TODO align print statements
+def remove_stopping_frames_not_good(args):
     data = dataset.DataSet(args.dataset)
-    images = sorted(data.images())
-    config = data.config
 
-    # the current image, next image is used as potentials to be the same as this image
-    im1i = 0
+    # The current image, next image is used as potentials to be the same as this image
+    images = sorted(data.images())
     retained = [images[0]]
     indexes = [0]
 
-    if is_good:
-        robust_matching_min_match = config['robust_matching_min_match']
-        cameras = data.load_camera_models()
-        exifs = {im: data.load_exif(im) for im in images}
+    # We should run neighbourhood matching anyway, first backup the existing config
+    config_path = os.path.join(data.data_path, "config.yaml")
+    config_bak  = config_path + ".bak"
+    os.rename(config_path, config_bak)
 
-        while im1i + 1 < len(images):
-            im1 = images[im1i]
-            # while the next image exists
-            p1, f1, c1 = data.load_features(im1)
-            i1 = data.load_feature_index(im1, f1)
-            # get the cached features
-            if data.matches_exists(im1):
-                im1_matches = data.load_matches(im1)
+    # Replace the line with neighbour 2
+    subprocess.call( \
+        ["sed -e \"s/matching_order_neighbors:.*/matching_order_neighbors: 2/\" " + config_bak + " > " + config_path], \
+        shell=True)
+
+
+    subprocess.call(["bin/opensfm", "match_features", args.dataset])
+
+    # Move back
+    os.remove(config_path)
+    os.rename(config_bak, config_path)
+
+    # using the loaded features after ransac
+    # slightly different logic here, we use the nearby frames' matches only
+    for i1, im1 in enumerate(images):
+        im1_matches = data.load_matches(im1)
+        p1, f1, c1 = data.load_features(im1)
+
+        if i1 + 1 < len(images):
+            im2 = images[i1 + 1]
+            p2, f2, c2 = data.load_features(im2)
+            match = im1_matches[im2]
+
+            if match == []:
+                print("im %s and im %s don't have match, throw away 2nd" % (im1, im2))
+                continue
+
+            # match is a list of tuples indicating which feature do I use for 2 images
+            inliers_ratio = homography_inlier_ratio(p1, p2, match, args)
+            print("computed match between im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
+            if inliers_ratio <= float(args.homography_inlier_ratio):
+                retained.append(im2)
+                indexes.append(i1 + 1)
             else:
-                im1_matches = {}
-            modified = False
-            
-            # Include segmentations
-            path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im1)[0]+'.png'    
-            file_name = Path(path_seg)
-            if file_name.is_file():
-                im1_seg = Image.open(path_seg)
-                im1_seg = np.array(im1_seg)
-            
-                idx_u1 = im1_seg.shape[1]*(p1[:,0] + 0.5)
-                idx_v1 = im1_seg.shape[0]*(p1[:,1] + 0.5)
-                im1_seg = im1_seg[idx_v1.astype(np.int),idx_u1.astype(np.int)]
+                print("homography inlier ratio is too high, throwing away %s" % im2)
+
+    return retained, indexes
+
+def get_cache(matches_path):
+    cache_path = os.path.join(os.path.dirname(matches_path), "matches_cache.txt")
+
+    computed = os.path.exists(cache_path)
+    if computed:
+        print("found cache of matched images")
+        with open(cache_path, "r") as f:
+            computed_matches = set([line.strip() for line in f.readlines() if len(line) > 0])
+
+        print("augmenting cache by reading matches directory")
+        for matches_file in os.listdir(matches_path):
+            image1 = matches_file[: - len("_matches.pkl.gz")]
+
+            import gzip, pickle
+            with gzip.open(os.path.join(matches_path, matches_file), "rb") as f:
+                matches = pickle.load(f)
+                for image2 in matches.keys():
+                    computed_matches.add("%s,%s" % (image1, image2))
+        print("found %i entries in cache" % len(computed_matches))
+    else:
+        computed_matches = None
+
+    return cache_path, computed, computed_matches
+
+def remove_stopping_frames_good(args):
+    data = dataset.DataSet(args.dataset)
+    config = data.config
+
+    # Check which, if any, matches have already been computed
+    cache_path, computed, computed_matches = get_cache(data.matches_path())
+
+    # The current image, next image is used as potentials to be the same as this image
+    images = sorted(data.images())
+    retained = [images[0]]
+    indexes = [0]
+
+    robust_matching_min_match = config["robust_matching_min_match"]
+    cameras = data.load_camera_models()
+    exifs = {im: data.load_exif(im) for im in images}
+
+    print("computing matches")
+
+    im1i = 0
+    while im1i + 1 < len(images):
+        im1 = images[im1i]
+
+        print("processing image %s" % im1)
+
+        p1, f1, c1 = data.load_features(im1)
+        i1 = data.load_feature_index(im1, f1)
+
+        # Get the cached features
+        if data.matches_exists(im1):
+            im1_matches = data.load_matches(im1)
+        else:
+            im1_matches = {}
+
+        # Match against all subsequent images
+        modified = False
+        for im2i in range(im1i + 1, len(images)):
+            im2 = images[im2i]
+
+            # Print without newline
+            print("\tmatching %s against %s " % (im1, im2))
+
+            # Check if already computed, and if not, mark as computed
+            if computed and "%s,%s" % (im1, im2) in computed_matches:
+                print("\t\tcache hit")
+                continue
             else:
-                im1_seg = None
+                print("\t\twriting to cache")
+                with open(cache_path, "a") as f:
+                    f.write("%s,%s\n" % (im1, im2))
 
-            for im2i in range(im1i+1, len(images)):
-                # match this image against the inow
-                im2 = images[im2i]
-                p2, f2, c2 = data.load_features(im2)
+            p2, f2, c2 = data.load_features(im2)
 
-                path_seg = data.data_path + "/images/output/results/frontend_vgg/" + os.path.splitext(im2)[0]+'.png'    
-                file_name = Path(path_seg)
-                if file_name.is_file():
-                    im2_seg = Image.open(path_seg)
-                    im2_seg = np.array(im2_seg)
-                else:
-                    im2_seg = None
-                if im2 not in im1_matches:
-                    modified = True
-                    i2 = data.load_feature_index(im2, f2)
-                    
-                    if file_name.is_file():
-                        idx_u2 = im2_seg.shape[1]*(p2[:,0]+0.5)
-                        idx_v2 = im2_seg.shape[0]*(p2[:,1]+0.5)
-                        im2_seg = im2_seg[idx_v2.astype(np.int),idx_u2.astype(np.int)]
-                    else:
-                        ims2_seg = None
-                    matches = matching.match_symmetric(f1, i1, f2, i2, config,
-                                                      im1_seg, im2_seg)
+            if im2 not in im1_matches:
+                modified = True
+                i2 = data.load_feature_index(im2, f2)
 
-                    if len(matches) < robust_matching_min_match:
-                        # this image doesn't have enough matches with the first one
-                        # i.e. either of them is broken, to be safe throw away both
-                        print("%s and %s don't have enough matches, skipping" % (im1, im2))
-                        im1i = im2i + 1
-                        break
+                # Include segmentations
+                im1_seg = get_segmentations(data, im1, p1, round = True)
+                im2_seg = get_segmentations(data, im2, p2, round = im2 not in im1_matches)
 
-                    # robust matching
-                    camera1 = cameras[exifs[im1]['camera']]
-                    camera2 = cameras[exifs[im2]['camera']]
+                sys.stdout.write("\t\t") # Prepend tabs in prints of match_symmetric
+                matches = matching.match_symmetric(f1, i1, f2, i2, config, im1_seg, im2_seg)
 
-                    rmatches = matching.robust_match(p1, p2, camera1, camera2, matches,
-                                                     config)
-                    if len(rmatches) < robust_matching_min_match:
-                        im1_matches[im2] = []
-                    else:
-                        im1_matches[im2] = rmatches
-                    #print("computed match between %s and %s" % (im1, im2))
-                else:
-                    rmatches = im1_matches[im2]
-
-                if len(rmatches) < robust_matching_min_match:
-                    print("%s and %s don't have enough robust matches, skipping" % (im1, im2))
+                if len(matches) < robust_matching_min_match:
+                    # This image doesn't have enough matches with the first one i.e. either of
+                    # them is broken; to be safe throw away both
+                    print("\t%s and %s don't have enough matches, skipping" % (im1, im2))
                     im1i = im2i + 1
                     break
 
-                inliers_ratio = homography_inlier_ratio(p1, p2, rmatches, args)
-                print("im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
-                if inliers_ratio <= float(args.homography_inlier_ratio):
-                    # this figure considered as not the same
-                    retained.append(im2)
-                    indexes.append(im2i)
-                    im1i = im2i
-                    break
+                # Robust matching
+                camera1 = cameras[exifs[im1]["camera"]]
+                camera2 = cameras[exifs[im2]["camera"]]
+
+                rmatches = matching.robust_match(p1, p2, camera1, camera2, matches, config)
+                if len(rmatches) < robust_matching_min_match:
+                    im1_matches[im2] = []
                 else:
-                    print("throw away %s" % im2)
+                    im1_matches[im2] = rmatches
             else:
-                im1i += 1
+                rmatches = im1_matches[im2]
 
-            if modified:
-                data.save_matches(im1, im1_matches)
+            if len(rmatches) < robust_matching_min_match:
+                print("\t%s and %s don't have enough robust matches, skipping" % (im1, im2))
+                im1i = im2i + 1
+                break
+
+            inliers_ratio = homography_inlier_ratio(p1, p2, rmatches, args)
+            print("\t\tcomputed match between im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
+            if inliers_ratio <= float(args.homography_inlier_ratio):
+                # this figure considered as not the same
+                retained.append(im2)
+                indexes.append(im2i)
+                im1i = im2i
+                break
+            else:
+                print("\thomography inlier ratio is too high, throwing away %s" % im2)
+        else:
+            im1i += 1
+
+        if modified:
+            data.save_matches(im1, im1_matches)
+
+    return retained, indexes
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dataset", help="dataset to process")
+    parser.add_argument("--homography_ransac_threshold",
+                        help="the threshold used to match homography",
+                        default=0.004)
+    parser.add_argument("--homography_inlier_ratio",
+                        help="the lower bound of homography inlier ratio to be considered as the same frame",
+                        default=0.90)
+    parser.add_argument("--matching_mod",
+                        help="could either be good or fast",
+                        default="good")
+
+    print("removing stopping frames")
+
+    args = parser.parse_args()
+    data = dataset.DataSet(args.dataset)
+
+    is_good = (args.matching_mod == "good")
+    if is_good:
+        retained, indexes = remove_stopping_frames_good(args)
     else:
-        # we should run neighbourhood matching anyway
-        # make a copy of the old config
-        config_path = os.path.join(data.data_path, "config.yaml")
-        config_bak  = config_path + ".bak"
-        os.rename(config_path, config_bak)
+        retained, indexes = remove_stopping_frames_not_good(args)
 
-        # replace the line with neighbour 2
-        subprocess.call(['sed -e "s/matching_order_neighbors:.*/matching_order_neighbors: 2/" ' +
-                         config_bak + ' > ' + config_path], shell=True)
-
-        subprocess.call(["bin/opensfm", "match_features", args.dataset])
-
-        # remove the replaced file
-        os.remove(config_path)
-        # move back
-        os.rename(config_bak, config_path)
-
-        # using the loaded features after ransac
-        # slightly different logic here, we use the nearby frames' matches only
-        for i1, im1 in enumerate(images):
-            im1_matches = data.load_matches(im1)
-            p1, f1, c1 = data.load_features(im1)
-
-            if i1+1 < len(images):
-                im2 = images[i1+1]
-                p2, f2, c2 = data.load_features(im2)
-                match = im1_matches[im2]
-                if match == []:
-                    print("im %s and im %s don't have match, throw away 2nd" % (im1, im2))
-                    continue
-                # match is a list of tuples indicating which feature do I use for 2 images
-                inliers_ratio = homography_inlier_ratio(p1, p2, match, args)
-                print("im %s and im %s, homography ratio is %f" % (im1, im2, inliers_ratio))
-                if inliers_ratio <= float(args.homography_inlier_ratio):
-                    retained.append(im2)
-                    indexes.append(i1+1)
-                else:
-                    print("throw away %s" % im2)
-
-    # TODO: investigate whether need to remove further stop frames
-    '''
-    # refine the list of remaining images by removing the isolated frames
-    refined = [retained[0]]
-    nn = 3
-    for i in range(1, len(retained)-1):
-        if abs(indexes[i]-indexes[i-1])<=nn or abs(indexes[i]-indexes[i+1])<=nn:
-            refined.append(retained[i])
-    refined.append(retained[-1])
-    retained = refined
-    '''
-
-    # overwrite the image list if it exists
+    # Overwrite the image list if it exists
     image_list = os.path.join(data.data_path, "image_list.txt")
     with open(image_list, "w") as f:
         for im in retained:
-            f.write("images/"+im+"\n")
+            f.write("images/" + im + "\n")
+
+    print("exit\n")
 
 if __name__ == "__main__":
     main()

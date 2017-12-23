@@ -242,6 +242,8 @@ def remove_stopping_frames_good(args):
 
     # process_images(args, data, images, config)
 
+    # TODO Images that don't work: 1503619185192395734-left.jpg, 1503619189619909871-left.jpg
+
     im1i = 0
     while im1i + 1 < len(images):
         im1 = images[im1i]

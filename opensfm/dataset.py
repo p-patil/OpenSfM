@@ -371,7 +371,8 @@ class DataSet:
         return os.path.join(self.__matches_path(), '{}_matches.pkl.gz'.format(image))
 
     def matches_exists(self, image):
-        return os.path.isfile(self.__matches_file(image))
+        matches_path = self.__matches_file(image)
+        return os.path.isfile(matches_path) and os.path.getsize(matches_path) > 0
 
     def load_matches(self, image):
         with gzip.open(self.__matches_file(image), 'rb') as fin:

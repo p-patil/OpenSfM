@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-sys.path.append("/home/piyush/Academics/Berkeley/deepdrive/mapping-dev/alpha/reconstruction/OpenSfM")
+sys.path.append("/root/bdd/OpenSfM")
 import numpy as np
 from PIL import Image
 from opensfm import dataset
@@ -104,7 +104,7 @@ def get_cache(matches_path):
 
         print("augmenting cache by reading matches directory")
         for matches_file in os.listdir(matches_path):
-            image1 = matches_file[: - len("_matches.pkl.gz")]
+            image1 = matches_file[ : - len("_matches.pkl.gz")]
 
             import gzip, pickle
             with gzip.open(os.path.join(matches_path, matches_file), "rb") as f:
@@ -122,7 +122,7 @@ def remove_stopping_frames_good(args):
     config = data.config
 
     # Check which, if any, matches have already been computed
-    cache_path, computed, computed_matches = get_cache(data.matches_path())
+    # cache_path, computed, computed_matches = get_cache(data.matches_path())
 
     # The current image, next image is used as potentials to be the same as this image
     images = sorted(data.images())
@@ -159,13 +159,13 @@ def remove_stopping_frames_good(args):
             print("\tmatching %s against %s " % (im1, im2))
 
             # Check if already computed, and if not, mark as computed
-            if computed and "%s,%s" % (im1, im2) in computed_matches:
-                print("\t\tcache hit")
-                continue
-            else:
-                print("\t\twriting to cache")
-                with open(cache_path, "a") as f:
-                    f.write("%s,%s\n" % (im1, im2))
+            # if computed and "%s,%s" % (im1, im2) in computed_matches:
+                # print("\t\tcache hit")
+                # continue
+            # else:
+                # print("\t\twriting to cache")
+                # with open(cache_path, "a") as f:
+                    # f.write("%s,%s\n" % (im1, im2))
 
             p2, f2, c2 = data.load_features(im2)
 

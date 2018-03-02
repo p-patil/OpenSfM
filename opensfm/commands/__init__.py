@@ -1,3 +1,4 @@
+import sys
 
 import extract_metadata
 import detect_features

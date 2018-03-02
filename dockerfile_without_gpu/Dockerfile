@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
         awscli \
         build-essential \
         cmake \
+        ffmpeg \
         git \
         pkg-config \
         python-dev \

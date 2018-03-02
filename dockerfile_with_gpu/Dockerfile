@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
         awscli \
         build-essential \
         cmake \
+        ffmpeg \
         git \
         pkg-config \
         python-dev \
@@ -169,3 +170,54 @@ RUN mkdir -p /root/deepdrive && \
     cd OpenSfM && \
     python setup.py build && \
     ./update_paths "/root/deepdrive/OpenSfM" "/root/deepdrive/dilation"
+
+
+# Personal stuff
+
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        python3 \
+        zsh
+
+# Set up config files
+RUN cd ~/ && \
+    ## Pull config files
+    git clone https://github.com/p-patil/dotfiles.git && \
+    ## Set up zsh
+    cp dotfiles/.zshrc ~/.zshrc && \
+    ## Set up tmux
+    git clone  https://github.com/gpakosz/.tmux.git && \
+    cp dotfiles/.tmux.conf.local ~/.tmux.conf.local && \
+    ln -s ~/.tmux/.tmux.conf ~/.tmux.conf && \
+    ## Set up vim
+    cp dotfiles/.vimrc ~/.vimrc && \
+    ## Clean up
+    rm -rf dotfiles
+
+# Configure vim
+RUN curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim && \
+    mkdir -p ~/.vim/colors && \
+    curl -o ~/.vim/colors/molokai.vim https://raw.githubusercontent.com/tomasr/molokai/master/colors/molokai.vim && \
+    mkdir -p ~/.vim/tmp && \
+    vim +PlugInstall +qall
+
+# Install tmux 2.6 from source
+RUN apt-get update && \
+    ## Install
+    apt-get install -y libevent-dev libncurses-dev xclip && \
+    cd ~/ && \
+    curl -O https://raw.githubusercontent.com/gurpreetatwal/dotfiles/master/install/tmux-256color.terminfo && \
+    curl --location --silent --show-error https://github.com/tmux/tmux/releases/download/2.6/tmux-2.6.tar.gz | tar -xz -C /tmp && \
+    cd /tmp/tmux-2.6 && ./configure && make && \
+    cd /tmp/tmux-2.6 && make install && \
+    tic -o ~/.terminfo ~/tmux-256color.terminfo && \
+    ## Configure
+    printf "\nexport TERM=\"xterm-256color\"\n" >> ~/.zshrc
+
+# Configure zsh and oh-my-zsh
+RUN env TERM="xterm-256color" zsh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" || true && \
+    chsh -s $(which zsh) && \
+    (mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc || true) && \
+    printf "\nexec zsh" >> ~/.bashrc && \
+    touch ~/.z

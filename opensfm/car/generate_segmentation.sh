@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # Dilation lib path on durian9
-DILATION_BIN="/home/piyush/Academics/Berkeley/deepdrive/mapping-dev/alpha/reconstruction/dilation"
+DILATION_BIN="/root/deepdrive/dilation"
 # Dilation on Kraken
-DILATION_BIN="/home/piyush/Academics/Berkeley/deepdrive/mapping-dev/alpha/reconstruction/dilation"
+DILATION_BIN="/root/deepdrive/dilation"
 
 PRETRAINED_MODEL=${DILATION_BIN}"/pretrained/dilation10_cityscapes.caffemodel"
 

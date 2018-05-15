@@ -10,11 +10,11 @@ def get_gps(json_path, video_filename):
     with open(json_path) as data_file:
         data = json.load(data_file)
 
-    seg = [x for x in data['segments'] if x['filename'] == video_filename]
+#    seg = [x for x in data['segments'] if x['filename'] == video_filename]
 
-    assert (len(seg) == 1)
-    seg = seg[0]
-    locs = seg['locations']
+#    assert (len(seg) == 1)
+#    seg = seg[0]
+    locs = data['locations']
     loc2nparray = lambda locs, key: np.array([x[key] for x in locs]).ravel()
 
     res = {}
@@ -51,9 +51,12 @@ def get_gps(json_path, video_filename):
         res[key] = loc2nparray(locs, key)
 
     # add the starting time point and ending time point as well
-    res['startTime'] = seg['startTime']
-    res['endTime'] = seg['endTime']
-
+    # res['startTime'] = seg['startTime']
+    # res['endTime'] = seg['endTime']
+    
+    res['startTime'] = data['startTime']
+    res['endTime'] = data['endTime']
+ 
     if res['timestamp'][0] - res['startTime'] > 2000:
         print('This is bad video because starting time too far ahead', json_path, video_filename)
         return None
